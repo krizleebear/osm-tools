@@ -1,0 +1,570 @@
+key	value	is_plural	phrase
+aeroway	aerodrome	0	Lotnisko
+aeroway	aerodrome	1	Lotniska
+amenity	atm	0	Bankomat
+amenity	atm	1	Bankomaty
+amenity	bank	0	Bank
+amenity	bank	1	Banki
+amenity	fast_food	0	Bar
+amenity	fast_food	1	Bary
+amenity	bicycle_parking	0	Parking rowerowy
+amenity	bicycle_parking	1	Parkingi rowerowe
+amenity	bicycle_rental	0	Wypożyczalnia rowerów
+amenity	bicycle_rental	1	Wypożyczalnie rowerów
+amenity	brothel	0	Burdel
+amenity	brothel	1	Burdele
+amenity	bureau_de_change	0	Kantor
+amenity	bureau_de_change	1	Kantory
+amenity	bus_station	0	Dworzec autobusowy
+amenity	bus_station	1	Dworce autobusowe
+amenity	cafe	0	Kawiarnia
+amenity	cafe	1	Kawiarnie
+amenity	car_rental	0	Wypożyczalnia samochodów
+amenity	car_rental	1	Wypożyczalnie samochodów
+amenity	car_wash	0	Myjnia
+amenity	car_wash	1	Myjnie
+amenity	car_wash	0	Myjnia samochodowa
+amenity	car_wash	1	Myjnie samochodowe
+amenity	casino	0	Kasyno
+amenity	casino	1	Kasyna
+amenity	cinema	0	Kino
+amenity	cinema	1	Kina
+amenity	doctors	0	Przychodnia
+amenity	doctors	1	Przychodnie
+amenity	college	0	Uczelnia
+amenity	college	1	Uczelnias
+amenity	courthouse	0	Sąd
+amenity	courthouse	1	Sąds
+amenity	crematorium	0	Krematorium
+amenity	crematorium	1	Krematoriums
+amenity	dentist	0	Gabinet dentystyczny
+amenity	dentist	1	Gabinety dentystyczne
+amenity	dentist	0	Dentysta
+amenity	dentist	1	Dentyści
+amenity	drinking_water	0	Źródło wody pitnej
+amenity	drinking_water	1	Źródło wody pitnejs
+amenity	driving_school	0	Nauka jazdy
+amenity	driving_school	1	Nauka jazdys
+amenity	embassy	0	Ambasada
+amenity	embassy	1	Ambasadas
+emergency	phone	0	Telefon alarmowy
+amenity	emergency_phone	1	Telefon alarmowys
+amenity	fast_food	0	Fast Food
+amenity	fast_food	1	Fast Foods
+amenity	ferry_terminal	0	Terminal promowy
+amenity	ferry_terminal	1	Terminal promowys
+emergency	fire_hydrant	0	Hydrant
+emergency	fire_hydrant	1	Hydrants
+amenity	fire_station	0	Remiza strażacka
+amenity	fire_station	1	Remiza strażackas
+amenity	fountain	0	Fontanna
+amenity	fountain	1	Fontannas
+amenity	fuel	0	Stacja benzynowa
+amenity	fuel	1	Stacja benzynowas
+amenity	gym	0	Centrum Fitness / Sala Gimnastyczna
+amenity	gym	1	Centrum Fitness / Sala Gimnastycznas
+amenity	hospital	0	Szpital
+amenity	hospital	1	Szpitale
+amenity	ice_cream	0	Lodziarnia
+amenity	ice_cream	1	Lodziarnias
+amenity	kindergarten	0	Przedszkole
+amenity	kindergarten	1	Przedszkola
+amenity	library	0	Biblioteka
+amenity	library	1	Bibliotekas
+amenity	nightclub	0	Klub nocny
+amenity	nightclub	1	Klub nocnys
+amenity	nursing_home	0	Dom opieki
+amenity	nursing_home	1	Dom opiekis
+amenity	pharmacy	0	Apteka
+amenity	pharmacy	1	Aptekas
+amenity	place_of_worship	0	Miejsce kultu
+amenity	place_of_worship	1	Miejsce kultus
+amenity	police	0	Posterunek policji
+amenity	police	1	Posterunki policji
+amenity	police	0	Policja
+amenity	police	1	Policje
+amenity	police	0	Komisariat policji
+amenity	police	1	Komisariaty policji
+amenity	post_box	0	Skrzynka pocztowa
+amenity	post_box	1	Skrzynka pocztowas
+amenity	post_office	0	Poczta
+amenity	post_office	1	Pocztas
+amenity	prison	0	Więzienie
+amenity	prison	1	Więzienies
+amenity	pub	0	Pub
+amenity	pub	1	Pubs
+amenity	recycling	0	Miejsce recyklingu
+amenity	recycling	1	Miejsce recyklingus
+amenity	restaurant	0	Restauracja
+amenity	restaurant	1	Restauracje
+amenity	retirement_home	0	Dom starców
+amenity	retirement_home	1	Dom starcóws
+amenity	sauna	0	Sauna
+amenity	sauna	1	Saunas
+amenity	school	0	Szkoła
+amenity	school	1	Szkołas
+amenity	shelter	0	Schron
+amenity	shelter	1	Schrons
+amenity	taxi	0	Postój taksówek
+amenity	taxi	1	Postój taksóweks
+amenity	telephone	0	Budka telefoniczna
+amenity	telephone	1	Budka telefonicznas
+amenity	theatre	0	Teatr
+amenity	theatre	1	Teatrs
+amenity	toilets	0	Toaleta publiczna
+amenity	toilets	1	Toaleta publicznas
+amenity	townhall	0	Urząd miejski
+amenity	townhall	1	Urząd miejskis
+amenity	university	0	Uniwersytet
+amenity	university	1	Uniwersytets
+amenity	veterinary	0	Weterynarz
+amenity	veterinary	1	Weterynarze
+amenity	townhall	0	Urząd gminy
+internet_access	wlan	0	WiFi
+internet_access	wlan	1	WiFi
+building	apartments	0	Blok mieszkalny
+building	apartments	1	Blok mieszkalnys
+building	block	0	Budynek bloku
+building	block	1	Budynek blokus
+building	bunker	0	Bunkier
+building	bunker	1	Bunkiers
+building	chapel	0	Kaplica
+building	chapel	1	Kaplicas
+building	church	0	Kościół
+building	church	1	Kościoły
+building	city_hall	0	Ratusz
+building	city_hall	1	Ratusze
+building	commercial	0	Budynek handlowy
+building	commercial	1	Budynki handlowe
+building	dormitory	0	Bursa
+building	dormitory	1	Bursas
+building	entrance	0	Wejście do budynku
+building	entrance	1	Wejście do budynkus
+building	faculty	0	Budynek prawny
+building	faculty	1	Budynek prawnys
+building	farm	0	Budynek gospodarczy
+building	farm	1	Budynek gospodarczys
+building	flats	0	Mieszkania
+building	flats	1	Mieszkanias
+building	garage	0	Garaż
+building	garage	1	Garaże
+building	hall	0	Hala
+building	hall	1	Halas
+building	hospital	0	Budynek szpitala
+building	hospital	1	Budynek szpitalas
+building	hotel	0	Hotel
+building	hotel	1	Hotels
+building	house	0	Dom
+building	house	1	Doms
+building	industrial	0	Budynek przemysłowy
+building	industrial	1	Budynek przemysłowys
+building	office	0	Budynek biurowy
+building	office	1	Budynek biurowys
+building	public	0	Budynek publiczny
+building	public	1	Budynek publicznys
+building	residential	0	Budynek mieszkalny
+building	residential	1	Budynek mieszkalnys
+building	retail	0	Budynek detaliczny
+building	retail	1	Budynek detalicznys
+building	school	0	Budynek szkoły
+building	school	1	Budynek szkołys
+building	stadium	0	Stadion
+building	stadium	1	Stadions
+building	tower	0	Wieża
+building	tower	1	Wieżas
+building	train_station	0	Stacja kolejowa
+building	train_station	1	Stacja kolejowas
+building	university	0	Budynek uniwersytetu
+building	university	1	Budynek uniwersytetus
+highway	bus_stop	0	Przystanek autobusowy
+highway	bus_stop	1	Przystanek autobusowys
+highway	construction	0	Droga w budowie
+highway	construction	1	Drogi w budowie
+highway	cycleway	0	Droga rowerowa
+highway	cycleway	1	Drogi rowerowe
+highway	ford	0	Bród
+highway	ford	1	Bróds
+highway	living_street	0	Strefa zamieszkania
+highway	living_street	1	Strefa zamieszkanias
+highway	motorway	0	Autostrada
+highway	motorway	1	Autostrady
+highway	motorway_junction	0	Skrzyżowanie autostrad
+highway	motorway_junction	1	Skrzyżowanie autostrads
+highway	path	0	Ścieżka
+highway	path	1	Ścieżki
+highway	pedestrian	0	Deptak
+highway	pedestrian	1	Deptaki
+highway	primary	0	Droga krajowa
+highway	primary	1	Droga krajowas
+highway	raceway	0	Tor wyścigowy
+highway	raceway	1	Tor wyścigowys
+highway	secondary	0	Droga wojewódzka
+highway	secondary	1	Droga wojewódzkas
+highway	tertiary	0	Droga powiatowa
+highway	tertiary	1	Droga powiatowas
+highway	trunk	0	Droga ekspresowa
+highway	trunk	1	Droga ekspresowas
+highway	trunk_link	0	Droga ekspresowa - dojazd
+highway	trunk_link	1	Droga ekspresowa - dojazds
+historic	boundary_stone	0	Kamień graniczny
+historic	boundary_stone	1	Kamienie graniczne
+historic	castle	0	Zamek
+historic	castle	1	Zameki
+historic	manor	0	Dwór
+historic	manor	1	Dwory
+historic	memorial	0	Pomnik
+historic	memorial	1	Pomniki
+historic	mine	0	Kopalnia
+historic	mine	1	Kopalnias
+historic	monument	0	Pomnik
+historic	monument	1	Pomniki
+historic	ruins	0	Ruiny
+historic	ruins	1	Ruinys
+historic	wreck	0	Wrak
+historic	wreck	1	Wraks
+landuse	allotments	0	Ogródki działkowe
+landuse	allotments	1	Ogródki działkowe
+landuse	cemetery	0	Cmentarz
+landuse	cemetery	1	Cmentarzs
+landuse	construction	0	Teren budowy
+landuse	construction	1	Tereny budów
+landuse	farm	0	Farma
+landuse	farm	1	Farmas
+landuse	farmyard	0	Podwórze gospodarskie
+landuse	farmyard	1	Podwórze gospodarskies
+landuse	forest	0	Las
+landuse	forest	1	Lass
+landuse	greenfield	0	Tereny niezagospodarowane
+landuse	greenfield	1	Tereny niezagospodarowanes
+landuse	industrial	0	Teren przemysłowy
+landuse	industrial	1	Teren przemysłowys
+landuse	landfill	0	Wysypisko śmieci
+landuse	landfill	1	Wysypisko śmiecis
+landuse	meadow	0	Łąka
+landuse	meadow	1	Łąkas
+landuse	military	0	Teren wojskowy
+landuse	military	1	Teren wojskowys
+landuse	quarry	0	Kamieniołom
+landuse	quarry	1	Kamieniołomy
+landuse	vineyard	0	Winnica
+landuse	vineyard	1	Winnice
+leisure	fishing	0	Łowisko
+leisure	fishing	1	Łowiska
+leisure	garden	0	Ogród
+leisure	garden	1	Ogróds
+leisure	golf_course	0	Pole golfowe
+leisure	golf_course	1	Pole golfowes
+leisure	ice_rink	0	Lodowisko
+leisure	ice_rink	1	Lodowiskos
+leisure	marina	0	Marina
+leisure	marina	1	Marinas
+leisure	park	0	Park
+leisure	park	1	Parks
+leisure	pitch	0	Boisko sportowe
+leisure	pitch	1	Boisko sportowes
+leisure	playground	0	Plac zabaw
+leisure	playground	1	Plac zabaws
+leisure	slipway	0	Pochylnia
+leisure	slipway	1	Pochylnias
+leisure	stadium	0	Stadion
+leisure	stadium	1	Stadions
+leisure	swimming_pool	0	Basen
+leisure	swimming_pool	1	Basens
+leisure	track	0	Bieżnia
+leisure	track	1	Bieżnias
+leisure	water_park	0	Park wodny
+leisure	water_park	1	Park wodnys
+natural	bay	0	Zatoka
+natural	bay	1	Zatokas
+natural	beach	0	Plaża
+natural	beach	1	Plażas
+natural	cape	0	Przylądek
+natural	cape	1	Przylądeks
+natural	cave_entrance	0	Wejście do jaskini
+natural	cave_entrance	1	Wejście do jaskinis
+natural	cliff	0	Urwisko
+natural	cliff	1	Urwiskos
+natural	fell	0	Hale górskie
+natural	fell	1	Hale górskies
+natural	glacier	0	Lodowiec
+natural	glacier	1	Lodowiecs
+natural	heath	0	Wrzosowisko
+natural	heath	1	Wrzosowiskos
+natural	marsh	0	Bagno
+natural	marsh	1	Bagnos
+natural	moor	0	Torfowisko
+natural	moor	1	Torfowiskos
+natural	peak	0	Szczyt
+natural	peak	1	Szczyts
+natural	reef	0	Rafa
+natural	reef	1	Rafas
+natural	ridge	0	Grzbiet
+natural	ridge	1	Grzbiets
+natural	rock	0	Skała
+natural	rock	1	Skałas
+natural	scree	0	Zsypisko
+natural	scree	1	Zsypiskos
+natural	shoal	0	Mielizna
+natural	shoal	1	Mieliznas
+natural	spring	0	Źródło
+natural	spring	1	Źródłos
+natural	tree	0	Drzewo
+natural	tree	1	Drzewos
+natural	valley	0	Dolina
+natural	valley	1	Dolinas
+natural	volcano	0	Wulkan
+natural	volcano	1	Wulkans
+natural	wood	0	Puszcza
+natural	wood	1	Puszczas
+place	city	0	Miasto
+place	city	1	Miastos
+place	country	0	Kraj
+place	country	1	Krajs
+place	county	0	Powiat
+place	county	1	Powiats
+place	farm	0	Farma
+place	farm	1	Farmas
+place	hamlet	0	Osada
+place	hamlet	1	Osadas
+place	house	0	Dom
+place	house	1	Doms
+place	houses	0	Zabudowanie
+place	houses	1	Zabudowanies
+place	island	0	Wyspa
+place	island	1	Wyspas
+place	islet	0	Wysepka
+place	islet	1	Wysepkas
+place	locality	0	Rejon
+place	locality	1	Rejons
+place	municipality	0	Gmina
+place	municipality	1	Gminas
+place	region	0	Rejon
+place	region	1	Rejons
+place	sea	0	Morze
+place	sea	1	Morzes
+place	state	0	Stan
+place	state	1	Stans
+place	suburb	0	Osiedle
+place	suburb	1	Osiedles
+place	town	0	Miasteczko
+place	town	1	Miasteczkos
+place	village	0	Wieś
+place	village	1	Wieśs
+railway	abandoned	0	Dawna linia kolejowa
+railway	abandoned	1	Dawna linia kolejowas
+railway	construction	0	Budowana linia kolejowa
+railway	construction	1	Budowana linia kolejowas
+railway	disused	0	Nieczynna trasa kolejowa
+railway	disused	1	Nieczynna trasa kolejowas
+railway	funicular	0	Kolejka linowa
+railway	funicular	1	Kolejka linowas
+railway	halt	0	Przystanek kolejowy
+railway	halt	1	Przystanek kolejowys
+railway	level_crossing	0	Przejazd kolejowy
+railway	level_crossing	1	Przejazd kolejowys
+railway	light_rail	0	Lekka kolej
+railway	light_rail	1	Lekka kolejs
+railway	monorail	0	Kolej jednoszynowa
+railway	monorail	1	Kolej jednoszynowas
+railway	narrow_gauge	0	Kolej wąskotorowa
+railway	narrow_gauge	1	Kolej wąskotorowas
+railway	platform	0	Peron
+railway	platform	1	Perons
+railway	preserved	0	Kolej zabytkowa
+railway	preserved	1	Kolej zabytkowas
+railway	station	0	Stacja kolejowa
+railway	station	1	Stacja kolejowas
+railway	subway	0	Stacja metra
+railway	subway	1	Stacja metras
+railway	subway_entrance	0	Wejście na stację metra
+railway	subway_entrance	1	Wejście na stację metras
+railway	switch	0	Zwrotnica
+railway	switch	1	Zwrotnicas
+railway	tram	0	Linia tramwajowa
+railway	tram	1	Linia tramwajowas
+railway	tram_stop	0	Przystanek tramwajowy
+railway	tram_stop	1	Przystanek tramwajowys
+shop	alcohol	0	Sklep monopolowy
+shop	alcohol	1	Sklep monopolowys
+shop	art	0	Sklep z dziełami sztuki
+shop	art	1	Sklep z dziełami sztukis
+shop	bakery	0	Piekarnia
+shop	bakery	1	Piekarnias
+shop	beauty	0	Salon kosmetyczny
+shop	beauty	1	Salon kosmetycznys
+shop	beverages	0	Sklep z napojami
+shop	beverages	1	Sklep z napojamis
+shop	bicycle	0	Sklep rowerowy
+shop	bicycle	1	Sklep rowerowys
+shop	books	0	Księgarnia
+shop	books	1	Księgarnias
+shop	butcher	0	Rzeźnik
+shop	butcher	1	Rzeźniks
+shop	car	0	Sklep samochodowy
+shop	car	1	Sklep samochodowys
+shop	car_parts	0	Sklep z częściami samochodowymi
+shop	car_parts	1	Sklep z częściami samochodowymis
+shop	car_repair	0	Naprawa samochodów
+shop	car_repair	1	Naprawa samochodóws
+shop	carpet	0	Sklep z dywanami
+shop	carpet	1	Sklep z dywanamis
+shop	charity	0	Sklep miłosny
+shop	charity	1	Sklep miłosnys
+shop	chemist	0	Drogeria
+shop	chemist	1	Drogerias
+shop	clothes	0	Sklep odzieżowy
+shop	clothes	1	Sklep odzieżowys
+shop	computer	0	Sklep komputerowy
+shop	computer	1	Sklep komputerowys
+shop	confectionery	0	Cukiernia
+shop	confectionery	1	Cukiernias
+shop	convenience	0	Spożywczy
+shop	convenience	1	Spożywcze
+shop	copyshop	0	Ksero
+shop	copyshop	1	Ksera
+shop	department_store	0	Dom towarowy
+shop	department_store	1	Dom towarowys
+shop	doityourself	0	Sklep budowlany
+shop	doityourself	1	Sklep budowlanys
+shop	dry_cleaning	0	Pralnia chemiczna
+shop	dry_cleaning	1	Pralnia chemicznas
+shop	electronics	0	Sklep elektroniczny
+shop	electronics	1	Sklep elektronicznys
+shop	estate_agent	0	Biuro nieruchomości
+shop	estate_agent	1	Biuro nieruchomościs
+shop	farm	0	Sklep gospodarski
+shop	farm	1	Sklep gospodarskis
+shop	fashion	0	Sklep modelarski
+shop	fashion	1	Sklep modelarskis
+shop	fish	0	Sklep rybny
+shop	fish	1	Sklep rybnys
+shop	florist	0	Kwiaciarnia
+shop	florist	1	Kwiaciarnie
+shop	funeral_directors	0	Zakład pogrzebowy
+shop	funeral_directors	1	Zakłady pogrzebowe
+shop	furniture	0	Sklep meblowy
+shop	furniture	1	Sklep meblowys
+shop	garden_centre	0	Centrum ogrodnicze
+shop	garden_centre	1	Centrum ogrodniczes
+shop	general	0	Sklep ogólny
+shop	general	1	Sklep ogólnys
+shop	gift	0	Sklep z pamiątkami
+shop	gift	1	Sklep z pamiątkamis
+shop	greengrocer	0	Warzywniak
+shop	greengrocer	1	Warzywniaki
+shop	hairdresser	0	Fryzjer
+shop	hairdresser	1	Fryzjerzy
+shop	hardware	0	Sklep ze sprzętem
+shop	hardware	1	Sklepy ze sprzętem
+shop	hifi	0	Hi-Fi
+shop	hifi	1	Hi-Fis
+office	insurance	0	Ubezpieczenie
+office	insurance	1	Ubezpieczenia
+shop	jewelry	0	Sklep z biżuterią
+shop	jewelry	1	Sklep z biżuteriąs
+shop	kiosk	0	Kiosk
+shop	kiosk	1	Kiosks
+shop	laundry	0	Pralnia
+shop	laundry	1	Pralnias
+shop	mall	0	Centrum handlowe
+shop	mall	1	Centrum handlowes
+shop	mobile_phone	0	Sklep z telefonami komórkowymi
+shop	mobile_phone	1	Sklep z telefonami komórkowymis
+shop	motorcycle	0	Sklep z motocyklami
+shop	motorcycle	1	Sklep z motocyklamis
+shop	music	0	Sklep muzyczny
+shop	music	1	Sklep muzycznys
+shop	newsagent	0	Kiosk
+shop	newsagent	1	Kiosks
+shop	optician	0	Optyk
+shop	optician	1	Optyks
+shop	organic	0	Sklep z produktami organicznymi
+shop	organic	1	Sklep z produktami organicznymis
+shop	outdoor	0	Sklep na wolnym powietrzu
+shop	outdoor	1	Sklep na wolnym powietrzus
+shop	pet	0	Sklep ze zwierzątkami
+shop	pet	1	Sklep ze zwierzątkamis
+shop	photo	0	Sklep fotograficzny
+shop	photo	1	Sklep fotograficznys
+shop	salon	0	Salon
+shop	salon	1	Salons
+shop	shoes	0	Sklep obuwniczy
+shop	shoes	1	Sklep obuwniczys
+shop	shopping_centre	0	Centrum handlowe
+shop	shopping_centre	1	Centrum handlowes
+shop	sports	0	Sklep sportowy
+shop	sports	1	Sklep sportowys
+shop	stationery	0	Sklep papierniczy
+shop	stationery	1	Sklep papierniczys
+shop	supermarket	0	Supermarket
+shop	supermarket	1	Supermarkets
+shop	toys	0	Sklep zabawkowy
+shop	toys	1	Sklep zabawkowys
+shop	travel_agency	0	Biuro podróży
+shop	travel_agency	1	Biuro podróżys
+shop	video	0	Sklep filmowy
+shop	video	1	Sklep filmowys
+shop	wine	0	Winiarnia
+shop	wine	1	Winiarnias
+tourism	alpine_hut	0	Chata Alpejska
+tourism	alpine_hut	1	Chata Alpejskas
+tourism	artwork	0	Sztuka
+tourism	artwork	1	Sztukas
+tourism	attraction	0	Atrakcja turystyczna
+tourism	attraction	1	Atrakcja turystycznas
+tourism	camp_site	0	Miejsce na kamping
+tourism	camp_site	1	Miejsce na kampings
+tourism	caravan_site	0	Miejsce na przyczepę campingową
+tourism	caravan_site	1	Miejsce na przyczepę campingowąs
+tourism	chalet	0	Schronisko
+tourism	chalet	1	Schroniskos
+tourism	guest_house	0	Pensjonat
+tourism	guest_house	1	Pensjonats
+tourism	hostel	0	Hostel
+tourism	hostel	1	Hostels
+tourism	hotel	0	Hotel
+tourism	hotel	1	Hotels
+tourism	information	0	Informacja turystyczna
+tourism	information	1	Informacja turystycznas
+tourism	motel	0	Motel
+tourism	motel	1	Motels
+tourism	museum	0	Muzeum
+tourism	museum	1	Muzeums
+tourism	picnic_site	0	Miejsce na piknik
+tourism	picnic_site	1	Miejsce na pikniks
+tourism	theme_park	0	Park tematyczny
+tourism	theme_park	1	Park tematycznys
+tourism	viewpoint	0	Punkt widokowy
+tourism	viewpoint	1	Punkt widokowys
+tourism	zoo	0	Zoo
+tourism	zoo	0	ogród zoologiczny
+waterway	boatyard	0	Stocznia
+waterway	boatyard	1	Stocznias
+waterway	canal	0	Kanał
+waterway	canal	1	Kanałs
+waterway	dam	0	Tama
+waterway	dam	1	Tamas
+waterway	derelict_canal	0	Opuszczony kanał
+waterway	derelict_canal	1	Opuszczony kanałs
+waterway	ditch	0	Rów
+waterway	ditch	1	Róws
+waterway	dock	0	Basen portowy
+waterway	dock	1	Basen portowys
+waterway	drain	0	Rów odpływowy
+waterway	drain	1	Rów odpływowys
+waterway	rapids	0	Katarakty
+waterway	rapids	1	Kataraktys
+waterway	river	0	Rzeka
+waterway	river	1	Rzekas
+waterway	riverbank	0	Brzeg rzeki
+waterway	riverbank	1	Brzeg rzekis
+waterway	stream	0	Strumień
+waterway	stream	1	Strumieńs
+waterway	wadi	0	Starorzecze
+waterway	wadi	1	Starorzeczes
+waterway	water_point	0	Punkt wodny
+waterway	water_point	1	Punkt wodnys
+waterway	waterfall	0	Wodospad
+waterway	waterfall	1	Wodospads
+waterway	weir	0	Jaz
+waterway	weir	1	Jazs

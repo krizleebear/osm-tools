@@ -1,0 +1,120 @@
+key	value	is_plural	phrase
+amenity	cinema	0	Kino
+amenity	cinema	1	Kina
+amenity	post_office	0	Pošta
+amenity	post_office	1	Pošty
+amenity	toilets	0	Toalety
+amenity	toilets	1	Toalety
+building	train_station	0	Železniční stanice
+building	train_station	1	Železniční stanice
+highway	bus_stop	0	Autobusová zastávka
+highway	bus_stop	1	Autobusové zastávky
+highway	gate	0	Brána
+highway	gate	1	Brány
+highway	residential	0	Ulice
+highway	residential	1	Ulice
+highway	secondary	0	Silnice II. třídy
+highway	secondary	1	Silnice II. třídy
+highway	steps	0	Schodiště
+highway	steps	0	Schody
+highway	steps	1	Schody
+landuse	cemetery	0	Hřbitov
+landuse	cemetery	1	Hřbitovy
+landuse	construction	0	Staveniště
+landuse	construction	1	Staveniště
+landuse	vineyard	0	Vinice
+landuse	vineyard	1	Vinice
+leisure	garden	0	Zahrada
+leisure	garden	1	Zahrady
+leisure	golf_course	0	Golfové hřiště
+leisure	golf_course	1	Golfové hřiště
+leisure	ice_rink	0	Kluziště
+leisure	ice_rink	1	Kluziště
+leisure	miniature_golf	0	Minigolf
+leisure	miniature_golf	1	Minigolfy
+leisure	nature_reserve	0	Přírodní rezervace
+leisure	nature_reserve	1	Přírodní rezervace
+leisure	park	0	Park
+leisure	park	1	Parky
+leisure	pitch	0	Hřiště
+leisure	pitch	1	Hřiště
+leisure	stadium	0	Stadion
+leisure	stadium	1	Stadiony
+leisure	swimming_pool	0	Bazén
+leisure	swimming_pool	1	Bazény
+natural	beach	0	Pláž
+natural	beach	1	Pláže
+natural	glacier	0	Ledovec
+natural	glacier	1	Ledovce
+natural	tree	0	Strom
+natural	tree	1	Stromy
+natural	valley	0	Údolí
+natural	valley	1	Údolí
+aeroway	aerodrome	0	Letiště
+aeroway	aerodrome	1	Letiště
+place	city	0	Velkoměsto
+place	city	1	Velkoměsta
+place	country	0	Stát
+place	country	1	Státy
+place	farm	0	Farma
+place	farm	1	Farmy
+place	hamlet	0	Osada
+place	hamlet	1	Osady
+place	house	0	Dům
+place	house	1	Domy
+place	houses	0	Budova
+place	houses	1	Budovy
+place	island	0	Ostrov
+place	island	1	Ostrovy
+place	islet	0	Ostrůvek
+place	islet	1	Ostrůvky
+place	locality	0	Oblast
+place	locality	1	Oblasti
+place	municipality	0	Obecní úřad
+place	municipality	1	Obecní úřady
+place	region	0	Kraj
+place	region	1	Kraje
+place	sea	0	Moře
+place	sea	1	Moře
+place	state	0	Stát
+place	state	1	Státy
+place	suburb	0	Městská část
+place	suburb	1	Městské části
+place	town	0	Město
+place	town	1	Města
+place	village	0	Vesnice
+place	village	1	Vesnice
+railway	halt	0	Železniční zastávka
+railway	halt	1	Železnční zastávky
+railway	subway	0	Stanice metra
+railway	subway	1	Stanice metra
+shop	hairdresser	0	Kadeřnictví
+shop	hairdresser	1	Kadeřnictví
+tourism	alpine_hut	0	Vysokohorská chata
+tourism	alpine_hut	1	Vysokohorské chaty
+tourism	attraction	0	Turistická atrakce
+tourism	attraction	1	Turistické atrakce
+tourism	camp_site	0	Tábořiště, kemp
+tourism	camp_site	1	Tábořiště, kempy
+tourism	caravan_site	0	Autokemping
+tourism	caravan_site	1	Autokempingy
+tourism	chalet	0	Velká chata
+tourism	chalet	1	Velké chaty
+tourism	guest_house	0	Penzion
+tourism	guest_house	1	Penziony
+tourism	hostel	0	Hostel
+tourism	hostel	1	Hostely
+tourism	hotel	0	Hotel
+tourism	hotel	1	Hotely
+tourism	information	0	Turistické informace
+tourism	information	1	Turistické informace
+tourism	motel	0	Motel
+tourism	motel	1	Motely
+tourism	museum	0	Muzeum
+tourism	museum	1	Muzea
+tourism	theme_park	0	Zábavní park
+tourism	theme_park	1	Zábavní parky
+tourism	viewpoint	0	Místo s dobrým výhledem
+tourism	viewpoint	1	Místo s dobrými výhledy
+tourism	zoo	0	Zoo
+tourism	zoo	1	Zoo
