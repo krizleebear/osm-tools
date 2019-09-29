@@ -1,8 +1,7 @@
 package net.leberfinger.osm.nominatim;
 
-import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
-import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.prep.PreparedGeometry;
 
 import com.github.davidmoten.rtree2.geometry.internal.RectangleDouble;
@@ -14,10 +13,12 @@ public class AdminPlace {
 	private final PreparedGeometry geometry;
 	private final JsonObject json;
 	private final RectangleDouble boundingBox;
+	private final long placeID;
 
 	AdminPlace(PreparedGeometry geometry, JsonObject json, RectangleDouble bbox) {
 		this.geometry = geometry;
 		this.json = json;
+		placeID = this.json.get("place_id").getAsLong();
 		this.boundingBox = bbox;
 	}
 
@@ -76,10 +77,8 @@ public class AdminPlace {
 		}
 	}
 
-	public boolean contains(double lat, double lon) {
-		Coordinate coordinate = new Coordinate(lon, lat);
-		org.locationtech.jts.geom.Point point = GeometryFactory.createPointFromInternalCoord(coordinate, geometry.getGeometry());
-		return geometry.contains(point);
+	public boolean covers(Point point) {
+		return geometry.covers(point);
 	}
 
 	@Override
@@ -93,5 +92,9 @@ public class AdminPlace {
 
 	public RectangleDouble getBoundingBox() {
 		return boundingBox;
+	}
+
+	public long getPlaceID() {
+		return placeID;
 	}
 }

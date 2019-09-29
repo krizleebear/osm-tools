@@ -3,6 +3,11 @@ package net.leberfinger.osm.nominatim;
 import java.io.IOException;
 import java.util.Optional;
 
+import org.eclipse.collections.api.set.primitive.MutableLongSet;
+import org.eclipse.collections.impl.factory.primitive.LongSets;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+
 import com.github.davidmoten.rtree2.Entry;
 import com.github.davidmoten.rtree2.RTree;
 import com.github.davidmoten.rtree2.geometry.Geometries;
@@ -20,6 +25,9 @@ public class NominatimCache {
 	private final NominatimConnection nominatim;
 
 	private RTree<AdminPlace, Rectangle> index = RTree.star().create();
+	private final GeometryFactory geoFactory = new GeometryFactory();
+	private final MutableLongSet containedPlaceIDs = LongSets.mutable.empty();
+
 	private int cacheMisses;
 	private int cacheHits;
 
@@ -42,20 +50,35 @@ public class NominatimCache {
 		cacheMisses++;
 		Optional<AdminPlace> placeFromNominatim = nominatim.askNominatim(lat, lon);
 		placeFromNominatim.ifPresent((place) -> {
-			this.index = this.index.add(place, place.getBoundingBox());
+			
+			cachePlaceIfUnknown(place);
+			
 		});
-		
+
 		return placeFromNominatim;
+	}
+
+	private void cachePlaceIfUnknown(AdminPlace place) {
+		long placeID = place.getPlaceID();
+		if(!containedPlaceIDs.contains(placeID))
+		{
+			this.index = this.index.add(place, place.getBoundingBox());
+			containedPlaceIDs.add(placeID);
+		}
 	}
 
 	public Optional<AdminPlace> searchInIndex(double lat, double lon) {
 		Point point = Geometries.pointGeographic(lon, lat);
 		Iterable<Entry<AdminPlace, Rectangle>> nearest = index.nearest(point, 0.9, 10);
+
+		Coordinate coordinate = new Coordinate(lon, lat);
+		org.locationtech.jts.geom.Point jtsPoint = geoFactory.createPoint(coordinate);
+
 		for (Entry<AdminPlace, Rectangle> result : nearest) {
 			Rectangle boundingBox = result.geometry();
 			if (boundingBox.contains(lon, lat)) {
 				AdminPlace place = result.value();
-				if (place.contains(lat, lon)) {
+				if (place.covers(jtsPoint)) {
 					return Optional.of(place);
 				}
 			}
@@ -63,8 +86,6 @@ public class NominatimCache {
 
 		return Optional.empty();
 	}
-
-	
 
 	public String getStatistic() {
 		JsonObject stats = new JsonObject();
