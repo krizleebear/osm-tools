@@ -63,6 +63,8 @@ public class GeoJSONResolver {
 		origFilename = FilenameUtils.removeExtension(origFilename);
 		String destFilename = origFilename + ".resolved.geojson";
 
+		//TODO: write file with entries that couldn't be resolved
+		
 		try (Writer writer = Files.newBufferedWriter(Paths.get(destFilename));
 				Stream<String> lines = Files.lines(file);) {
 			AtomicInteger ai = new AtomicInteger(0);

@@ -3,6 +3,7 @@ package net.leberfinger.osm.nominatim;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.prep.PreparedGeometry;
 
 import com.github.davidmoten.rtree2.geometry.internal.RectangleDouble;
 import com.google.gson.JsonElement;
@@ -10,18 +11,18 @@ import com.google.gson.JsonObject;
 
 public class AdminPlace {
 
-	private final Geometry geometry;
+	private final PreparedGeometry geometry;
 	private final JsonObject json;
 	private final RectangleDouble boundingBox;
 
-	AdminPlace(Geometry geometry, JsonObject json, RectangleDouble bbox) {
+	AdminPlace(PreparedGeometry geometry, JsonObject json, RectangleDouble bbox) {
 		this.geometry = geometry;
 		this.json = json;
 		this.boundingBox = bbox;
 	}
 
 	public Geometry getGeometry() {
-		return geometry;
+		return geometry.getGeometry();
 	}
 
 	/**
@@ -77,7 +78,7 @@ public class AdminPlace {
 
 	public boolean contains(double lat, double lon) {
 		Coordinate coordinate = new Coordinate(lon, lat);
-		org.locationtech.jts.geom.Point point = GeometryFactory.createPointFromInternalCoord(coordinate, geometry);
+		org.locationtech.jts.geom.Point point = GeometryFactory.createPointFromInternalCoord(coordinate, geometry.getGeometry());
 		return geometry.contains(point);
 	}
 

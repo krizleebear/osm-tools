@@ -5,6 +5,8 @@ import java.util.Optional;
 
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.prep.PreparedGeometry;
+import org.locationtech.jts.geom.prep.PreparedGeometryFactory;
 import org.locationtech.jts.io.ParseException;
 import org.locationtech.jts.io.WKTReader;
 
@@ -24,6 +26,10 @@ public class NominatimConnection {
 
 	private OkHttpClient client = new OkHttpClient();
 	private final String nominatimBaseURL;
+	
+	private final GeometryFactory geoFactory = new GeometryFactory();
+	private final WKTReader wktReader = new WKTReader(geoFactory);
+	private final PreparedGeometryFactory preparedGeoFactory = new PreparedGeometryFactory();
 	
 	/**
 	 * constructor to pass Nominatim's base URL, e.g. http://192.168.43.201:7070/
@@ -89,13 +95,13 @@ public class NominatimConnection {
 			}
 
 			String geotext = json.get("geotext").getAsString();
-//			System.out.println(address);
-
-			GeometryFactory geoFactory = new GeometryFactory();
-			WKTReader wktReader = new WKTReader(geoFactory);
 			Geometry geometry = wktReader.read(geotext);
+			
+			// remove JSON version of polygon to reduce memory footprint
+			json.remove("geotext");
 
-//			System.out.println(geometry);
+			// create an optimized version of the read geometry
+			PreparedGeometry optimizedGeometry = preparedGeoFactory.create(geometry);
 
 			JsonArray bboxJSON = json.get("boundingbox").getAsJsonArray();
 			double x1 = bboxJSON.get(2).getAsDouble();
@@ -104,7 +110,7 @@ public class NominatimConnection {
 			double y2 = bboxJSON.get(1).getAsDouble();
 			RectangleDouble bbox = RectangleDouble.create(x1, y1, x2, y2);
 
-			AdminPlace place = new AdminPlace(geometry, json, bbox);
+			AdminPlace place = new AdminPlace(optimizedGeometry, json, bbox);
 			return Optional.of(place);
 
 		} catch (ParseException e) {
