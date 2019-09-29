@@ -10,8 +10,6 @@ import org.locationtech.jts.geom.prep.PreparedGeometryFactory;
 import org.locationtech.jts.io.ParseException;
 import org.locationtech.jts.io.WKTReader;
 
-import com.github.davidmoten.rtree2.geometry.internal.RectangleDouble;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -103,14 +101,7 @@ public class NominatimConnection {
 			// create an optimized version of the read geometry
 			PreparedGeometry optimizedGeometry = preparedGeoFactory.create(geometry);
 
-			JsonArray bboxJSON = json.get("boundingbox").getAsJsonArray();
-			double x1 = bboxJSON.get(2).getAsDouble();
-			double y1 = bboxJSON.get(0).getAsDouble();
-			double x2 = bboxJSON.get(3).getAsDouble();
-			double y2 = bboxJSON.get(1).getAsDouble();
-			RectangleDouble bbox = RectangleDouble.create(x1, y1, x2, y2);
-
-			AdminPlace place = new AdminPlace(optimizedGeometry, json, bbox);
+			AdminPlace place = new AdminPlace(optimizedGeometry, json);
 			return Optional.of(place);
 
 		} catch (ParseException e) {
