@@ -4,7 +4,6 @@ import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.prep.PreparedGeometry;
 
-import com.github.davidmoten.rtree2.geometry.internal.RectangleDouble;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
@@ -12,14 +11,12 @@ public class AdminPlace {
 
 	private final PreparedGeometry geometry;
 	private final JsonObject json;
-	private final RectangleDouble boundingBox;
 	private final long placeID;
 
-	AdminPlace(PreparedGeometry geometry, JsonObject json, RectangleDouble bbox) {
+	AdminPlace(PreparedGeometry geometry, JsonObject json) {
 		this.geometry = geometry;
 		this.json = json;
 		placeID = this.json.get("place_id").getAsLong();
-		this.boundingBox = bbox;
 	}
 
 	public Geometry getGeometry() {
@@ -88,10 +85,6 @@ public class AdminPlace {
 		builder.append(getAddress());
 		builder.append("]");
 		return builder.toString();
-	}
-
-	public RectangleDouble getBoundingBox() {
-		return boundingBox;
 	}
 
 	public long getPlaceID() {
