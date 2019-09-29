@@ -59,6 +59,7 @@ public class WayToNodeConverter implements Sink {
 
 	@Override
 	public void complete() {
+		System.out.println();
 	}
 
 	@Override
