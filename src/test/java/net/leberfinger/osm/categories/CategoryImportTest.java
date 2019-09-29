@@ -34,6 +34,7 @@ class CategoryImportTest {
 
 		ImmutableSet<String> englishNames = restaurantCategory.getNames("en");
 		assertThat(englishNames).contains("Restaurant");
+		System.out.println(englishNames);
 	}
 
 }
