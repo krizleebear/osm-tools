@@ -33,20 +33,59 @@ public class GeoJSONResolver {
 
 	public JsonObject addAddress(String geoJSON) throws IOException {
 		JsonObject json = parser.parse(geoJSON).getAsJsonObject();
-		JsonObject geometry = json.get("geometry").getAsJsonObject();
-		JsonArray coordinates = geometry.get("coordinates").getAsJsonArray();
-		JsonArray firstCoordinate = coordinates.get(0).getAsJsonArray();
-		double lon = firstCoordinate.get(0).getAsDouble();
-		double lat = firstCoordinate.get(1).getAsDouble();
+		
+		//{"id":722985747,"type":"way","tags":{"amenity":"parking"},"centroid":{"lat":"51.9065664","lon":"10.5317602"},"bounds":{"e":"10.5319003","n":"51.9066136","s":"51.9065176","w":"10.5316345"}}
+
+		JsonArray coordinate = getCoordinate(json);
+		
+		double lon = coordinate.get(0).getAsDouble();
+		double lat = coordinate.get(1).getAsDouble();
 
 		Optional<AdminPlace> resolvedPlace = resolver.resolve(lat, lon);
 		JsonObject properties = json.get("properties").getAsJsonObject();
+		if(properties == null)
+		{
+			properties = json.get("tags").getAsJsonObject();
+		}
 
 		if (resolvedPlace.isPresent()) {
 			resolvedPlace.get().addMissingAddressProperties(properties);
 		}
 
 		return json;
+	}
+
+	/**
+	 * note: in x/y order (means: lon/lat)
+	 * @param json
+	 * @return
+	 */
+	private JsonArray getCoordinate(JsonObject json) {
+
+		JsonArray coordinates = new JsonArray();
+		
+		//e.g. {"id":359829,"type":"node","lat":50.9049155,"lon":6.963953500000001,"tags":{"amenity":"car_rental","name":"Starcar Autovermietung"}}
+
+		if(json.has("lat") && json.has("lon"))
+		{
+			coordinates.add(json.get("lon"));
+			coordinates.add(json.get("lat"));
+		}
+		else if(json.has("centroid"))
+		{
+			//{"id":4408507,"type":"way","tags":{"amenity":"parking"},"centroid":{"lat":"49.0393827","lon":"8.3355651"},"bounds":{"e":"8.3358719","n":"49.0395493","s":"49.0391033","w":"8.3351585"}}
+			JsonObject centroid = json.get("centroid").getAsJsonObject();
+			coordinates.add(centroid.get("lon"));
+			coordinates.add(centroid.get("lat"));
+		}
+		else if(json.has("geometry"))
+		{
+			JsonObject geometry = json.get("geometry").getAsJsonObject();
+			JsonArray geometryCoordinates = geometry.get("coordinates").getAsJsonArray();
+			coordinates = geometryCoordinates.get(0).getAsJsonArray();
+		}
+		
+		return coordinates;
 	}
 
 	/**
