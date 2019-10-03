@@ -145,4 +145,10 @@ public class GeoJSONResolver {
 	public String getStatistics() {
 		return resolver.getStatistic();
 	}
+	
+	public static void main(String[] args) throws IOException {
+		String nominatimBaseURL = "";
+		GeoJSONResolver resolver = new GeoJSONResolver(nominatimBaseURL);
+		resolver.resolveLinesInFile(Paths.get(args[0]));
+	}
 }
