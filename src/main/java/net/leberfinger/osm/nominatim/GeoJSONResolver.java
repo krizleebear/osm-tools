@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 import org.apache.commons.io.FilenameUtils;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -34,26 +35,45 @@ public class GeoJSONResolver {
 	public JsonObject addAddress(String geoJSON) throws IOException {
 		JsonObject json = parser.parse(geoJSON).getAsJsonObject();
 		
-		//{"id":722985747,"type":"way","tags":{"amenity":"parking"},"centroid":{"lat":"51.9065664","lon":"10.5317602"},"bounds":{"e":"10.5319003","n":"51.9066136","s":"51.9065176","w":"10.5316345"}}
-
 		JsonArray coordinate = getCoordinate(json);
 		
 		double lon = coordinate.get(0).getAsDouble();
 		double lat = coordinate.get(1).getAsDouble();
 
 		Optional<AdminPlace> resolvedPlace = resolver.resolve(lat, lon);
-		JsonObject properties = json.get("properties").getAsJsonObject();
-		if(properties == null)
-		{
-			properties = json.get("tags").getAsJsonObject();
-		}
+		
+		JsonObject properties = getProperties(json);
 
 		if (resolvedPlace.isPresent()) {
 			resolvedPlace.get().addMissingAddressProperties(properties);
 		}
+		else
+		{
+			json.addProperty("error", "unresolved");
+		}
 
 		return json;
 	}
+	
+	/**
+	 * GeoJSON properties might be stored as property "properties" or "tags".
+	 * Normalize to the official standard "properties".
+	 */
+	private static JsonObject getProperties(JsonObject json) {
+
+		JsonElement props = json.get("properties");
+
+		if (props == null) {
+			props = json.get("tags");
+		}
+
+		if (props == null) {
+			props = new JsonObject();
+		}
+
+		return props.getAsJsonObject();
+	}
+	
 
 	/**
 	 * note: in x/y order (means: lon/lat)
@@ -101,17 +121,15 @@ public class GeoJSONResolver {
 		String origFilename = file.getFileName().toString();
 		origFilename = FilenameUtils.removeExtension(origFilename);
 		String destFilename = origFilename + ".resolved.geojson";
-
-		//TODO: write file with entries that couldn't be resolved
 		
-		try (Writer writer = Files.newBufferedWriter(Paths.get(destFilename));
+		try (Writer resolvedWriter = Files.newBufferedWriter(Paths.get(destFilename));
 				Stream<String> lines = Files.lines(file);) {
 			AtomicInteger ai = new AtomicInteger(0);
-			lines.forEach(t -> {
+			lines.forEach(line -> {
 				try {
-					JsonObject resolved = addAddress(t);
-					writer.write(resolved.toString());
-					writer.write("\n");
+					JsonObject resolved = addAddress(line);
+					resolvedWriter.write(resolved.toString());
+					resolvedWriter.write("\n");
 
 					int i = ai.incrementAndGet();
 					if (i % 1000 == 0) {

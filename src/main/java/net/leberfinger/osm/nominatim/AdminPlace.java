@@ -42,7 +42,38 @@ public class AdminPlace {
 	public JsonElement getAddress() {
 		return json.get("address");
 	}
+	
+	public JsonObject getJSON()
+	{
+		return json;
+	}
 
+	/**
+	 * <pre>
+	 * Continent, sea  2
+	 * Country 4
+	 * State   8
+	 * Region  10
+	 * County  12
+	 * City    16
+	 * Island, town, moor, waterways   17
+	 * Village, hamlet, municipality, district, borough, airport, national park    18
+	 * Suburb, croft, subdivision, farm, locality, islet   20
+	 * Hall of residence, neighbourhood, housing estate, landuse (polygon only)    22
+	 * Airport, street, road   26
+	 * Paths, cycleways, service roads, etc.   27
+	 * House, building 28
+	 * Postcode    11–25 (depends on country)
+	 * Other   30
+	 * </pre>
+	 * 
+	 * @return
+	 */
+	public int getPlaceRank()
+	{
+		return json.get("place_rank").getAsInt();
+	}
+	
 	/**
 	 * Add the missing address properties to the given GeoJSON properties, e.g.
 	 * 
@@ -60,10 +91,21 @@ public class AdminPlace {
 		JsonObject nominatimAddress = getAddress().getAsJsonObject();
 
 		addIfMissing(properties, "nominatim:place_id", this.json.get("place_id"));
+		addIfMissing(properties, "nominatim:place_rank", this.json.get("place_rank"));
 		addIfMissing(properties, "addr:city", nominatimAddress.get("city"));
+		addIfMissing(properties, "addr:city_district", nominatimAddress.get("city_district"));
+		
 		addIfMissing(properties, "addr:state", nominatimAddress.get("state"));
 		addIfMissing(properties, "addr:country", nominatimAddress.get("country"));
 		addIfMissing(properties, "country_code", nominatimAddress.get("country_code"));
+		
+		// if city was not set, try other place forms, e.g. town, village
+		// @see https://wiki.openstreetmap.org/wiki/Key:place
+		addIfMissing(properties, "addr:city", nominatimAddress.get("town"));
+		addIfMissing(properties, "addr:city", nominatimAddress.get("village"));
+		addIfMissing(properties, "addr:city", nominatimAddress.get("hamlet"));
+		addIfMissing(properties, "addr:city", nominatimAddress.get("isolated_dwelling"));
+		addIfMissing(properties, "addr:city", nominatimAddress.get("county"));
 	}
 
 	private void addIfMissing(JsonObject properties, String key, JsonElement value) {

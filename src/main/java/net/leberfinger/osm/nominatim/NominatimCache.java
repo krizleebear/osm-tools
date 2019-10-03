@@ -40,6 +40,8 @@ public class NominatimCache {
 
 	public Optional<AdminPlace> resolve(double lat, double lon) throws IOException {
 
+		//TODO: find a way to skip coordinates outside of available DB
+		
 		Optional<AdminPlace> placeFromIndex = searchInIndex(lat, lon);
 		if (placeFromIndex.isPresent()) {
 			cacheHits++;
@@ -58,6 +60,12 @@ public class NominatimCache {
 	}
 
 	private void cachePlaceIfUnknown(AdminPlace place) {
+		
+		// don't cache places that are overly huge, e.g. states or countries
+		if (place.getPlaceRank() < 15) {
+			return;
+		}
+		
 		long placeID = place.getPlaceID();
 		if (!containedPlaceIDs.contains(placeID)) {
 			Envelope envelope = place.getGeometry().getEnvelopeInternal();
@@ -90,5 +98,10 @@ public class NominatimCache {
 		stats.addProperty("IndexSize", index.size());
 
 		return stats.toString();
+	}
+	
+	public int getCacheSize()
+	{
+		return index.size();
 	}
 }
