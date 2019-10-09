@@ -1,5 +1,7 @@
 package net.leberfinger.osm.nominatim;
 
+import java.util.Optional;
+
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.prep.PreparedGeometry;
@@ -74,6 +76,11 @@ public class AdminPlace {
 		return json.get("place_rank").getAsInt();
 	}
 	
+	public int getAdminLevel()
+	{
+		return json.get("admin_level").getAsInt();
+	}
+	
 	/**
 	 * Add the missing address properties to the given GeoJSON properties, e.g.
 	 * 
@@ -107,6 +114,62 @@ public class AdminPlace {
 		addIfMissing(properties, "addr:city", nominatimAddress.get("isolated_dwelling"));
 		addIfMissing(properties, "addr:city", nominatimAddress.get("county"));
 	}
+	
+	/**
+	 * TODO: make country dependant, see
+	 * https://wiki.openstreetmap.org/wiki/Tag:boundary%3Dadministrative#10_admin_level_values_for_specific_countries
+	 * 
+	 * @param adminLevel
+	 * @return
+	 */
+	public static String getAddressElementForAdminLevel(int adminLevel) {
+		switch (adminLevel) {
+		case 2: {
+			return "addr:country";
+		}
+		case 4: {
+			return "addr:state";
+		}
+		case 5: {
+			return "addr:state_district";
+		}
+		case 6: {
+			return "addr:county";
+		}
+		case 7: {
+			return "addr:amt";
+		}
+		case 8: {
+			return "addr:city";
+		}
+		case 9: {
+			return "addr:city_district";
+		}
+		case 10: {
+			return "addr:city_district";
+		}
+		case 11: {
+			return "addr:city_district_11";
+		}
+		case 12: {
+			return "addr:city_district_12";
+		}
+		case 13: {
+			return "addr:city_district_13";
+		}
+		case 14: {
+			return "addr:city_district_14";
+		}
+		case 15: {
+			return "addr:city_district_15";
+		}
+		case 16: {
+			return "addr:city_district_16";
+		}
+		default: 
+			throw new RuntimeException("Unknown admin level " + adminLevel);
+		}
+	}
 
 	private void addIfMissing(JsonObject properties, String key, JsonElement value) {
 		if (!properties.has(key) && value != null) {
@@ -123,12 +186,26 @@ public class AdminPlace {
 	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
-		builder.append("AdminPlace [");
+		builder.append("AdminPlace [address=");
 		builder.append(getAddress());
+		builder.append(",admin_level");
+		builder.append(getAdminLevel());
+		builder.append(":");
+		builder.append(getName());
 		builder.append("]");
 		return builder.toString();
 	}
 
+	public Optional<String> getName()
+	{
+		JsonElement nameElement = getJSON().get("name");
+		if(nameElement == null)
+		{
+			return Optional.empty();
+		}
+		return Optional.of(nameElement.getAsString());
+	}
+	
 	public long getPlaceID() {
 		return placeID;
 	}

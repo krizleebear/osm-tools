@@ -93,19 +93,25 @@ public class NominatimConnection {
 			}
 
 			String geotext = json.get("geotext").getAsString();
-			Geometry geometry = wktReader.read(geotext);
 			
-			// remove JSON version of polygon to reduce memory footprint
-			json.remove("geotext");
-
-			// create an optimized version of the read geometry
-			PreparedGeometry optimizedGeometry = preparedGeoFactory.create(geometry);
+			PreparedGeometry optimizedGeometry = createGeoFromText(geotext);
 
 			AdminPlace place = new AdminPlace(optimizedGeometry, json);
+
+			// remove JSON version of polygon to reduce memory footprint
+			json.remove("geotext");
 			return Optional.of(place);
 
 		} catch (ParseException e) {
 			throw new IOException(e);
 		}
+	}
+
+	private PreparedGeometry createGeoFromText(String geotext) throws ParseException {
+		Geometry geometry = wktReader.read(geotext);
+
+		// create an optimized version of the read geometry
+		PreparedGeometry optimizedGeometry = preparedGeoFactory.create(geometry);
+		return optimizedGeometry;
 	}
 }
