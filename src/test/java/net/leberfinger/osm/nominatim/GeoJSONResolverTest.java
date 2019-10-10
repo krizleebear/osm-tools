@@ -5,12 +5,15 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
+import org.locationtech.jts.io.ParseException;
 
 import com.google.common.base.Stopwatch;
 import com.google.gson.JsonObject;
@@ -34,7 +37,7 @@ class GeoJSONResolverTest {
 	}
 
 	@Test
-	void resolveFile() throws IOException
+	void resolveFile() throws IOException, ParseException
 	{
 		Stopwatch w = Stopwatch.createStarted();
 		
@@ -45,7 +48,8 @@ class GeoJSONResolverTest {
 		Path destFile = Paths.get("testpois.linedelimited.resolved.geojson"); 
 		Files.deleteIfExists(destFile);
 		
-		GeoJSONResolver resolver = new GeoJSONResolver(NOMINATIM_BASE_URL);
+//		GeoJSONResolver resolver = new GeoJSONResolver(NOMINATIM_BASE_URL);
+		GeoJSONResolver resolver = new GeoJSONResolver(getPolygonResolver());
 		resolver.resolveLinesInFile(input);
 		
 		w.stop();
@@ -54,5 +58,17 @@ class GeoJSONResolverTest {
 		
 		assertTrue(Files.exists(destFile));
 		assertTrue(Files.size(destFile) > 0);
+	}
+	
+	public IAdminResolver getPolygonResolver() throws IOException, ParseException
+	{
+		PostGISPolygons polys = new PostGISPolygons();
+		
+		Path dumpFile = Paths.get("postgisdump.txt");
+		try (Reader r = Files.newBufferedReader(dumpFile, StandardCharsets.UTF_8)) {
+			polys.importCache(r);
+		}
+
+		return polys;
 	}
 }

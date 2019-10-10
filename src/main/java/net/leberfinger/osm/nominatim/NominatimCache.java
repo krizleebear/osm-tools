@@ -92,17 +92,18 @@ public class NominatimCache implements IAdminResolver {
 		return Optional.empty();
 	}
 
-	public String getStatistic() {
+	public int getCacheSize()
+	{
+		return index.size();
+	}
+
+	@Override
+	public String getStatistics() {
 		JsonObject stats = new JsonObject();
 		stats.addProperty("cacheMisses", cacheMisses);
 		stats.addProperty("cacheHits", cacheHits);
 		stats.addProperty("IndexSize", index.size());
 
 		return stats.toString();
-	}
-	
-	public int getCacheSize()
-	{
-		return index.size();
 	}
 }

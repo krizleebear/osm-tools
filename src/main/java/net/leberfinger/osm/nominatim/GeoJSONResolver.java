@@ -25,11 +25,16 @@ public class GeoJSONResolver {
 	// "geometry":{"type":"LineString","coordinates":[[12.3246216,47.764686700000006],[12.3250828,47.7644864],[12.325169200000001,47.764477500000005],[12.325607000000002,47.7648224],[12.325173900000001,47.7650616],[12.3254827,47.7653313],[12.326057100000002,47.765092200000005],[12.3262151,47.7655946],[12.325594500000001,47.7657013],[12.3252178,47.765698500000006],[12.325133200000002,47.765490400000004],[12.325050000000001,47.7653011],[12.3248721,47.765119500000004],[12.324669,47.7648832],[12.3246216,47.764686700000006]]}}
 
 	JsonParser parser = new JsonParser();
-	private final NominatimCache resolver;
+	private final IAdminResolver resolver;
 
 	public GeoJSONResolver(String nominatimBaseURL) {
 		NominatimConnection nominatim = new NominatimConnection(nominatimBaseURL);
 		resolver = new NominatimCache(nominatim);
+	}
+	
+	public GeoJSONResolver(IAdminResolver resolver)
+	{
+		this.resolver = resolver;
 	}
 
 	public JsonObject addAddress(String geoJSON) throws IOException {
@@ -114,16 +119,16 @@ public class GeoJSONResolver {
 	 * 
 	 * Will write a new file with extension ".resolved.geojson".
 	 * 
-	 * @param file
+	 * @param inputFile
 	 * @throws IOException
 	 */
-	public void resolveLinesInFile(Path file) throws IOException {
-		String origFilename = file.getFileName().toString();
+	public void resolveLinesInFile(Path inputFile) throws IOException {
+		String origFilename = inputFile.getFileName().toString();
 		origFilename = FilenameUtils.removeExtension(origFilename);
 		String destFilename = origFilename + ".resolved.geojson";
 		
 		try (Writer resolvedWriter = Files.newBufferedWriter(Paths.get(destFilename));
-				Stream<String> lines = Files.lines(file);) {
+				Stream<String> lines = Files.lines(inputFile);) {
 			AtomicInteger ai = new AtomicInteger(0);
 			lines.forEach(line -> {
 				try {
@@ -143,7 +148,7 @@ public class GeoJSONResolver {
 	}
 
 	public String getStatistics() {
-		return resolver.getStatistic();
+		return resolver.getStatistics();
 	}
 	
 	public static void main(String[] args) throws IOException {

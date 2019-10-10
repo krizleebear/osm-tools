@@ -1,5 +1,10 @@
 package net.leberfinger.osm.nominatim;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.Reader;
+import java.io.Writer;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -15,12 +20,14 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.prep.PreparedGeometry;
 import org.locationtech.jts.geom.prep.PreparedGeometryFactory;
 import org.locationtech.jts.index.quadtree.Quadtree;
 import org.locationtech.jts.io.ParseException;
 import org.locationtech.jts.io.WKTReader;
+import org.locationtech.jts.io.WKTWriter;
 import org.postgis.PGbox2d;
 import org.postgis.PGbox3d;
 import org.postgis.PGgeometry;
@@ -28,6 +35,7 @@ import org.postgresql.PGConnection;
 import org.postgresql.util.HStoreConverter;
 
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 /**
  * Import all admin boundaries from the given Nominatim PostGIS DB to RAM. This
@@ -64,7 +72,7 @@ public class PostGISPolygons implements IAdminResolver {
 
 			// ST_AsText(geometry)
 
-			String query = "select osm_id, name, ST_AsText(geometry), osm_type, class, type, osm_type, admin_level "
+			String query = "select osm_id, name, ST_AsText(geometry), osm_type, admin_level "
 					+ "from place where name IS NOT NULL and class='boundary' and type='administrative';";
 
 			try (Statement s = conn.createStatement(); //
@@ -74,9 +82,10 @@ public class PostGISPolygons implements IAdminResolver {
 					JsonObject jsonPlace = new JsonObject();
 					// PGgeometry geomContainer = r.getObject(3, PGgeometry.class);
 
-					final int adminLevel = r.getInt(8);
+					final int adminLevel = r.getInt(5);
 					jsonPlace.addProperty("admin_level", adminLevel);
 					jsonPlace.addProperty("place_id", r.getLong(1));
+					jsonPlace.addProperty("osm_type", r.getString(4));
 
 					JsonObject addressProperties = new JsonObject();
 					jsonPlace.add("address", addressProperties);
@@ -97,19 +106,91 @@ public class PostGISPolygons implements IAdminResolver {
 					}
 
 					String geotext = r.getString(3);
-
+					
 					PreparedGeometry geometry = createGeoFromText(geotext);
-					Envelope envelope = geometry.getGeometry().getEnvelopeInternal();
-
 					AdminPlace adminPlace = new AdminPlace(geometry, jsonPlace);
-					index.insert(envelope, adminPlace);
+
+					if (isArea(geometry.getGeometry())) {
+						addToIndex(adminPlace);
+					}
 				}
 			} catch (ParseException e) {
 				throw new RuntimeException(e);
 			}
-
-			System.out.println("Index size: " + index.size());
 		}
+	}
+
+	private boolean isArea(Geometry geometry) {
+		Class<? extends Geometry> geoClass = geometry.getClass();
+		if (geoClass == LineString.class) {
+			return false;
+		}
+		return true;
+	}
+
+	private void addToIndex(AdminPlace place) {
+		final Geometry geometry = place.getGeometry();
+		Envelope envelope = geometry.getEnvelopeInternal();
+
+		index.insert(envelope, place);
+	}
+	
+	/**
+	 * Export all objects in the current cache to the given writer. A new JSON line
+	 * is written for each object.
+	 * 
+	 * @param w
+	 */
+	public void exportCache(Writer w) {
+		try (PrintWriter pw = new PrintWriter(w)) {
+			WKTWriter wktWriter = new WKTWriter(2);
+
+			@SuppressWarnings("unchecked")
+			List<AdminPlace> places = index.queryAll();
+			for (AdminPlace place : places) {
+				JsonObject copy = copyJSON(place.getJSON());
+				String geometryString = wktWriter.write(place.getGeometry());
+				copy.addProperty("wktGeometry", geometryString);
+
+				pw.println(copy.toString());
+			}
+		}
+	}
+
+	/**
+	 * Fill the cache with the objects provided by the given Reader. This is the
+	 * reverse operation of {@link #exportCache(Writer)}.
+	 * 
+	 * @param r
+	 * @throws IOException
+	 * @throws ParseException
+	 */
+	public void importCache(Reader r) throws IOException, ParseException {
+		try (BufferedReader br = new BufferedReader(r)) {
+			JsonParser parser = new JsonParser();
+			String line = null;
+			while ((line = br.readLine()) != null) {
+				JsonObject json = parser.parse(line).getAsJsonObject();
+				String wellKnownText = json.remove("wktGeometry").getAsString();
+
+				PreparedGeometry geometry = createGeoFromText(wellKnownText);
+
+				AdminPlace adminPlace = new AdminPlace(geometry, json);
+				
+				if (isArea(geometry.getGeometry())) {
+					addToIndex(adminPlace);
+				}
+			}
+		}
+	}
+
+	private static JsonObject copyJSON(JsonObject original) {
+		JsonObject copy = new JsonObject();
+		original.entrySet().forEach(entry -> {
+			copy.add(entry.getKey(), entry.getValue());
+		});
+
+		return copy;
 	}
 
 	private PreparedGeometry createGeoFromText(String geotext) throws ParseException {
@@ -161,4 +242,11 @@ public class PostGISPolygons implements IAdminResolver {
 			});
 		}
 	}
+
+	@Override
+	public String getStatistics() {
+		return "Index size: " + index.size();
+	}
+	
+	
 }

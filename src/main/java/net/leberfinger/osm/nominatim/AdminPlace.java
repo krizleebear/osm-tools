@@ -99,12 +99,19 @@ public class AdminPlace {
 
 		addIfMissing(properties, "nominatim:place_id", this.json.get("place_id"));
 		addIfMissing(properties, "nominatim:place_rank", this.json.get("place_rank"));
+		
 		addIfMissing(properties, "addr:city", nominatimAddress.get("city"));
 		addIfMissing(properties, "addr:city_district", nominatimAddress.get("city_district"));
-		
 		addIfMissing(properties, "addr:state", nominatimAddress.get("state"));
 		addIfMissing(properties, "addr:country", nominatimAddress.get("country"));
 		addIfMissing(properties, "country_code", nominatimAddress.get("country_code"));
+
+		
+		addIfMissing(properties, "addr:city", nominatimAddress.get("addr:city"));
+		addIfMissing(properties, "addr:city_district", nominatimAddress.get("addr:city_district"));
+		addIfMissing(properties, "addr:state", nominatimAddress.get("addr:state"));
+		addIfMissing(properties, "addr:country", nominatimAddress.get("addr:country"));
+		
 		
 		// if city was not set, try other place forms, e.g. town, village
 		// @see https://wiki.openstreetmap.org/wiki/Key:place

@@ -115,4 +115,9 @@ public class NominatimConnection implements IAdminResolver {
 		PreparedGeometry optimizedGeometry = preparedGeoFactory.create(geometry);
 		return optimizedGeometry;
 	}
+
+	@Override
+	public String getStatistics() {
+		return "";
+	}
 }
