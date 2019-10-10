@@ -188,10 +188,6 @@ public class AdminPlace {
 		StringBuilder builder = new StringBuilder();
 		builder.append("AdminPlace [address=");
 		builder.append(getAddress());
-		builder.append(",admin_level");
-		builder.append(getAdminLevel());
-		builder.append(":");
-		builder.append(getName());
 		builder.append("]");
 		return builder.toString();
 	}

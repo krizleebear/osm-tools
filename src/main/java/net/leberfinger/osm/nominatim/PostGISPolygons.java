@@ -35,7 +35,7 @@ import com.google.gson.JsonObject;
  * 
  * @see https://github.com/mediagis/nominatim-docker
  */
-public class PostGISPolygons {
+public class PostGISPolygons implements IAdminResolver {
 
 	private final Quadtree index = new Quadtree();
 	private final GeometryFactory geoFactory = new GeometryFactory();
@@ -120,7 +120,8 @@ public class PostGISPolygons {
 		return optimizedGeometry;
 	}
 
-	public Optional<AdminPlace> searchInIndex(double lat, double lon) {
+	@Override
+	public Optional<AdminPlace> resolve(double lat, double lon) {
 		Coordinate coordinate = new Coordinate(lon, lat);
 		Point jtsPoint = geoFactory.createPoint(coordinate);
 		final Envelope pointEnvelope = jtsPoint.getEnvelopeInternal();

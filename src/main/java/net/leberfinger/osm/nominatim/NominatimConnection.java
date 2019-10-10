@@ -20,7 +20,7 @@ import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 
-public class NominatimConnection {
+public class NominatimConnection implements IAdminResolver {
 
 	private OkHttpClient client = new OkHttpClient();
 	private final String nominatimBaseURL;
@@ -43,7 +43,8 @@ public class NominatimConnection {
 		this("http://192.168.43.201:7070");
 	}
 	
-	public Optional<AdminPlace> askNominatim(double lat, double lon) throws IOException {
+	@Override
+	public Optional<AdminPlace> resolve(double lat, double lon) throws IOException {
 		Call call = buildCall(lat, lon);
 		Response response = call.execute();
 		return handleResponse(response, call);

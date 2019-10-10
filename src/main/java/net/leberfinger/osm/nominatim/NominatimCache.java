@@ -19,7 +19,7 @@ import com.google.gson.JsonObject;
  * Quad-Tree index and uses this polygons to resolve further requests without
  * querying Nominatim.
  */
-public class NominatimCache {
+public class NominatimCache implements IAdminResolver {
 
 	private final NominatimConnection nominatim;
 	private final Quadtree index = new Quadtree();
@@ -38,6 +38,7 @@ public class NominatimCache {
 		this.nominatim = nominatim;
 	}
 
+	@Override
 	public Optional<AdminPlace> resolve(double lat, double lon) throws IOException {
 
 		//TODO: find a way to skip coordinates outside of available DB
@@ -49,7 +50,7 @@ public class NominatimCache {
 		}
 
 		cacheMisses++;
-		Optional<AdminPlace> placeFromNominatim = nominatim.askNominatim(lat, lon);
+		Optional<AdminPlace> placeFromNominatim = nominatim.resolve(lat, lon);
 		placeFromNominatim.ifPresent((place) -> {
 
 			cachePlaceIfUnknown(place);
