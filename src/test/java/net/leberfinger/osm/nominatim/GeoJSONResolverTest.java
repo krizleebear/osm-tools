@@ -62,7 +62,7 @@ class GeoJSONResolverTest {
 	
 	public IAdminResolver getPolygonResolver() throws IOException, ParseException
 	{
-		PostGISPolygons polys = new PostGISPolygons();
+		PointInPolyResolver polys = new PointInPolyResolver();
 		
 		Path dumpFile = Paths.get("postgisdump.txt");
 		try (Reader r = Files.newBufferedReader(dumpFile, StandardCharsets.UTF_8)) {
