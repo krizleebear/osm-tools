@@ -24,12 +24,10 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 /**
- * Import all admin boundaries from the given Nominatim PostGIS DB to RAM. This
- * class is assuming the setup provided by nominatim-docker.
- * 
- * @see https://github.com/mediagis/nominatim-docker
+ * Import all admin boundaries from the given text file to RAM. <br/>
+ * The text file can be created using {@link PostGISPlaceExport}
  */
-public class PointInPolyResolver implements IAdminResolver {
+public class PolygonCache implements IAdminResolver {
 
 	private final STRtree index = new STRtree();
 	private final GeometryFactory geoFactory = new GeometryFactory();

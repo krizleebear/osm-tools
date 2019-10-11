@@ -15,9 +15,9 @@ import org.locationtech.jts.io.ParseException;
 
 import com.google.common.base.Stopwatch;
 
-class PointInPolyResolverTest {
+class PolygonCacheTest {
 
-	private static PointInPolyResolver polys = new PointInPolyResolver();
+	private static PolygonCache polys = new PolygonCache();
 
 	@BeforeAll
 	public static void importDump() throws IOException, ParseException

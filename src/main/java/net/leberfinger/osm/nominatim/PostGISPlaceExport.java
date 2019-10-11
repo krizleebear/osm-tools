@@ -27,6 +27,14 @@ import org.postgresql.util.HStoreConverter;
 
 import com.google.gson.JsonObject;
 
+/**
+ * Export all place polygons from Nominatim's PostGIS DB to a text file. Each
+ * line contains a JSON that describes a place and its geometry.</p>
+ * 
+ * This class is assuming the DB setup provided by nominatim-docker.
+ * 
+ * @see https://github.com/mediagis/nominatim-docker
+ */
 public class PostGISPlaceExport {
 
 	private final GeometryFactory geoFactory = new GeometryFactory();
