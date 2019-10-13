@@ -109,6 +109,7 @@ public class AdminPlace {
 		
 		addIfMissing(properties, "addr:city", nominatimAddress.get("addr:city"));
 		addIfMissing(properties, "addr:city_district", nominatimAddress.get("addr:city_district"));
+		addIfMissing(properties, "addr:county", nominatimAddress.get("addr:county"));
 		addIfMissing(properties, "addr:state", nominatimAddress.get("addr:state"));
 		addIfMissing(properties, "addr:country", nominatimAddress.get("addr:country"));
 		
@@ -120,6 +121,10 @@ public class AdminPlace {
 		addIfMissing(properties, "addr:city", nominatimAddress.get("hamlet"));
 		addIfMissing(properties, "addr:city", nominatimAddress.get("isolated_dwelling"));
 		addIfMissing(properties, "addr:city", nominatimAddress.get("county"));
+		
+		// if city is still not set, but county is set, assume a district-city
+		// (e.g. Kreisfreie Stadt in Germany)
+		addIfMissing(properties, "addr:city", nominatimAddress.get("addr:county"));
 	}
 	
 	/**
