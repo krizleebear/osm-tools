@@ -73,10 +73,17 @@ public class PolygonCache implements IAdminResolver {
 				JsonObject addressProperties = new JsonObject();
 				properties.add("address", addressProperties);
 				
-				int adminLevel = properties.get("admin_level").getAsInt();
-
-				String addressKey = AdminPlace.getAddressElementForAdminLevel(adminLevel);
-				addressProperties.add(addressKey, properties.get("name"));
+				if(properties.has("admin_level"))
+				{
+					int adminLevel = properties.get("admin_level").getAsInt();
+					String addressKey = AdminPlace.getAddressElementForAdminLevel(adminLevel);
+					addressProperties.add(addressKey, properties.get("name"));
+				}
+				else
+				{
+					//TODO: ignore the whole polygon for now
+					continue;
+				}
 				
 				String geometryJSON = json.remove("geometry").toString();
 
