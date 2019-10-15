@@ -100,6 +100,11 @@
 			<version>1.16.1</version>
 		</dependency>
 		<dependency>
+			<groupId>org.locationtech.jts.io</groupId>
+			<artifactId>jts-io-common</artifactId>
+			<version>1.16.1</version>
+		</dependency>
+		<dependency>
 			<groupId>net.postgis</groupId>
 			<artifactId>postgis-jdbc</artifactId>
 			<version>2.3.0</version>

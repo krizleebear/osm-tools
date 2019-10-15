@@ -21,4 +21,12 @@ Internally JTS structures and algorithms are used which are quite optimized and 
 A tool to export all administrative places (cities, counties, ...) from Nominatim's PostGIS DB to a flat text file. This polygon dump can then be imported to PolygonCache.  
 
 ### PolygonCache
-RAM cache for bulk reverse geo coding requests. Intended to quickly resolve e.g. all POIs of a whole country. Pretty fast: Can resolve all POIs of Germany in as little as 1 minute on a single laptop core.  
+RAM cache for bulk reverse geo coding requests. Intended to quickly resolve e.g. all POIs of a whole country. Pretty fast: Can resolve all POIs of Germany in as little as 1 minute on a single laptop core.
+
+#### directly importGeoJSON
+Osmium can be used to directly export the required polygons from a PBF file without Nominatim:
+
+```bash
+osmium tags-filter --output admins.osm.pbf --overwrite ${INPUT_PBF} boundary=administrative
+osmium export admins.osm.pbf -o polygons.geojsonseq --omit-rs --overwrite --geometry-types=polygon
+```

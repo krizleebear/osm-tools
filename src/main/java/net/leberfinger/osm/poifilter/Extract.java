@@ -20,21 +20,22 @@ public class Extract {
 
 	public static void main(String[] args) throws IOException {
 
-//		File inputFile = new File("/Users/krizleebear/Downloads", "germany-latest.osm.pbf");
+		File inputFile = new File("/Users/krizleebear/Downloads", "germany-latest.osm.pbf");
 //		File inputFile = new File("liechtenstein-latest.osm.pbf");
-		File inputFile = new File("/Users/krizleebear/Downloads", "oberbayern-latest.osm.pbf");
+//		File inputFile = new File("/Users/krizleebear/Downloads", "oberbayern-latest.osm.pbf");
 
 		long fileSize = Files.size(inputFile.toPath());
 		String msg = String.format("First pass of %s with size of %d", inputFile.getName(), fileSize);
 		System.out.println(msg);
 		WayNodeFinder wayNodes = firstPass(inputFile);
+
+		Path destFile = getOutputFilename(inputFile.toPath());
 		//TODO: write node POIs to file and append way POIs afterwards
 
 		System.out.println("Second pass of file");
 		WayToNodeConverter converter = secondPass(inputFile, wayNodes);
 		Stream<Way> waysWithLocation = converter.waysWithLocation();
 		
-		Path destFile = getOutputFilename(inputFile.toPath());
 		
 		writePOIs(waysWithLocation, destFile);
 		System.out.println("Wrote filtered POIs to " + destFile);

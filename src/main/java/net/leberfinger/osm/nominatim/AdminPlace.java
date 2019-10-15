@@ -41,8 +41,8 @@ public class AdminPlace {
 	 * 
 	 * @return
 	 */
-	public JsonElement getAddress() {
-		return json.get("address");
+	public JsonObject getAddress() {
+		return json.get("address").getAsJsonObject();
 	}
 	
 	public JsonObject getJSON()
@@ -95,7 +95,7 @@ public class AdminPlace {
 	 * </pre>
 	 */
 	public void addMissingAddressProperties(JsonObject properties) {
-		JsonObject nominatimAddress = getAddress().getAsJsonObject();
+		JsonObject nominatimAddress = getAddress();
 
 		addIfMissing(properties, "nominatim:place_id", this.json.get("place_id"));
 		addIfMissing(properties, "nominatim:place_rank", this.json.get("place_rank"));
@@ -216,5 +216,16 @@ public class AdminPlace {
 	
 	public long getPlaceID() {
 		return placeID;
+	}
+
+	public Optional<String> getCity() {
+		return getAddressComponent("addr:city");
+	}
+	
+	private Optional<String> getAddressComponent(String key) {
+		if (getAddress().has(key)) {
+			return Optional.of(getAddress().get(key).getAsString());
+		}
+		return Optional.empty();
 	}
 }

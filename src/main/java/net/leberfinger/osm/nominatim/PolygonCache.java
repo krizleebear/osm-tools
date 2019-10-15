@@ -19,13 +19,20 @@ import org.locationtech.jts.geom.prep.PreparedGeometryFactory;
 import org.locationtech.jts.index.strtree.STRtree;
 import org.locationtech.jts.io.ParseException;
 import org.locationtech.jts.io.WKTReader;
+import org.locationtech.jts.io.geojson.GeoJsonReader;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 /**
- * Import all admin boundaries from the given text file to RAM. <br/>
- * The text file can be created using {@link PostGISPlaceExport}
+ * In-memory Admin Resolver.
+ * </p>
+ * Imports administrative boundaries from a given text file to RAM. <br/>
+ * The text file can be created using {@link PostGISPlaceExport}. <br/>
+ * Alternatively {@link #importGeoJSONStream(Reader)} can be used to import line
+ * delimited GeoJSON objects.
+ * <p/>
+ * Import can effectively only be called once.
  */
 public class PolygonCache implements IAdminResolver {
 
@@ -35,6 +42,54 @@ public class PolygonCache implements IAdminResolver {
 	private final WKTReader wktReader = new WKTReader(geoFactory);
 	private final PreparedGeometryFactory preparedGeoFactory = new PreparedGeometryFactory();
 
+	/**
+	 * Import a file of line delimited GeoJSON objects.
+	 * <p/>
+	 * This kind of file can be directly exported using osmium-tool:
+	 * 
+	 * <pre>
+	 * osmium tags-filter --output admins.osm.pbf --overwrite ${INPUT_PBF} boundary=administrative
+	 * osmium export admins.osm.pbf -o polygons.geojsonseq --omit-rs --overwrite --geometry-types=polygon
+	 * </pre>
+	 * 
+	 * @param r
+	 * @throws IOException
+	 * @throws ParseException
+	 */
+	public void importGeoJSONStream(Reader r) throws IOException, ParseException {
+		GeoJsonReader geoReader = new GeoJsonReader(geoFactory);
+
+		try (BufferedReader br = new BufferedReader(r)) {
+			JsonParser parser = new JsonParser();
+			String line = null;
+
+			int i = 0;
+			while ((line = br.readLine()) != null) {
+				JsonObject json = parser.parse(line).getAsJsonObject();
+
+				JsonObject properties = json.get("properties").getAsJsonObject();
+				properties.addProperty("place_id", i++);
+				
+				JsonObject addressProperties = new JsonObject();
+				properties.add("address", addressProperties);
+				
+				int adminLevel = properties.get("admin_level").getAsInt();
+
+				String addressKey = AdminPlace.getAddressElementForAdminLevel(adminLevel);
+				addressProperties.add(addressKey, properties.get("name"));
+				
+				String geometryJSON = json.remove("geometry").toString();
+
+				Geometry geometry = geoReader.read(geometryJSON);
+				PreparedGeometry optimizedGeometry = preparedGeoFactory.create(geometry);
+
+				AdminPlace adminPlace = new AdminPlace(optimizedGeometry, properties);
+
+				addToIndex(adminPlace);
+			}
+		}
+	}
+	
 	/**
 	 * Fill the cache with the objects provided by the given Reader. This is the
 	 * reverse operation of {@link #exportCache(Writer)}.
@@ -53,7 +108,6 @@ public class PolygonCache implements IAdminResolver {
 				String wellKnownText = json.remove("wktGeometry").getAsString();
 
 				PreparedGeometry geometry = createGeoFromText(wellKnownText);
-
 				AdminPlace adminPlace = new AdminPlace(geometry, json);
 				
 				addToIndex(adminPlace);
@@ -113,7 +167,7 @@ public class PolygonCache implements IAdminResolver {
 
 			// add collected information to the current place
 			addressElements.entrySet().forEach(entry -> {
-				place.getAddress().getAsJsonObject().add(entry.getKey(), entry.getValue());
+				place.getAddress().add(entry.getKey(), entry.getValue());
 			});
 		}
 	}
@@ -121,5 +175,9 @@ public class PolygonCache implements IAdminResolver {
 	@Override
 	public String getStatistics() {
 		return "Index size: " + index.size();
+	}
+
+	public int size() {
+		return index.size();
 	}
 }

@@ -1,66 +1,58 @@
 package net.leberfinger.osm.nominatim;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import java.io.Reader;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.io.ParseException;
 
-import com.google.common.base.Stopwatch;
+import com.google.gson.JsonObject;
 
 class PolygonCacheTest {
 
-	private static PolygonCache polys = new PolygonCache();
+	public static final String TEST_RESOURCES_DIR = "src/test/resources";
 
-	@BeforeAll
-	public static void importDump() throws IOException, ParseException
+	@Test 
+	void useCityDistrictAsCity() throws IOException, ParseException
 	{
-		Path dumpFile = Paths.get("postgisdump.txt");
-		try (Reader r = Files.newBufferedReader(dumpFile, StandardCharsets.UTF_8)) {
+		PolygonCache polys = new PolygonCache();
+		Path input = Paths.get(TEST_RESOURCES_DIR, "wkt-poly-schwabach.json");
+		
+		try(Reader r = Files.newBufferedReader(input))
+		{
 			polys.importCache(r);
 		}
 		
-		System.out.println(Runtime.getRuntime().totalMemory());
+		String json = "{\"id\":33127072,\"type\":\"node\",\"lat\":49.361308,\"lon\":11.0231662,\"tags\":{\"amenity\":\"restaurant\",\"cuisine\":\"greek\",\"name\":\"Bierstüberl\",\"nominatim:place_id\":62720,\"addr:state\":\"Bayern\",\"addr:country\":\"Deutschland\"}}";
+		GeoJSONResolver resolver = new GeoJSONResolver(polys);
+		JsonObject resolved = resolver.addAddress(json);
+		
+		JsonObject tags = resolved.getAsJsonObject("tags");
+		
+		assertEquals("Schwabach", tags.get("addr:city").getAsString());
+		assertEquals("Schwabach", tags.get("addr:county").getAsString());
 	}
 	
 	@Test
-	void test() throws IOException, ParseException {
-		
-		// Stadtbergen, Bauernstraße, Augsburg
-		System.out.println(polys.resolve(48.366231478923446, 10.844616293907167));
-		
-		Stopwatch stopwatch = Stopwatch.createStarted();
-//		for(int i=0; i<1_000_000; i++)
-//		{
-//			polys.resolve(48.366231478923446, 10.844616293907167);
-//		}
-		long elapsedSeconds = stopwatch.elapsed(TimeUnit.SECONDS);
-		System.out.println("Resolving took " + elapsedSeconds);
-	}
-
-	@Test
-	void resolve()
+	void importGeoJSON() throws IOException, ParseException
 	{
-		Optional<AdminPlace> place = polys.resolve(48, 11);
-		System.out.println(place);
-
-		// Stadtbergen, Bauernstraße, Augsburg
-		System.out.println(polys.resolve(48.366231478923446, 10.844616293907167));
-
-		// Augsburg Hauptbahnhof
-		System.out.println(polys.resolve(48.36541265686059, 10.885391235351564));
-
-		// Berlin
-		System.out.println(polys.resolve(52.518611, 13.408333));
-
-		System.out.println(polys.resolve(50, 12));
+		Path input = Paths.get(TEST_RESOURCES_DIR, "polygon-palling.geojsonseq");
+		PolygonCache cache = new PolygonCache();
+		try(Reader r = Files.newBufferedReader(input))
+		{
+			cache.importGeoJSONStream(r);
+		}
+		
+		assertEquals(1, cache.size());
+        
+		Optional<AdminPlace> resolved = cache.resolve(48.001021364084664,12.638118267059326);
+		Optional<String> city = resolved.get().getCity();
+		assertEquals("Palling", city.get());
 	}
-	
 }

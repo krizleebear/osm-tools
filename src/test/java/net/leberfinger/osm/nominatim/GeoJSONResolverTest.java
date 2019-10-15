@@ -43,7 +43,7 @@ class GeoJSONResolverTest {
 		
 		Path input = Paths.get(TEST_RESOURCES_DIR, "testpois.linedelimited.geojson");
 //		input = Paths.get("oberbayern-latest.osm.pois.geojson"); //TODO:comment
-//		input = Paths.get("germany-latest.osm.pois.geojson"); //TODO:comment
+		input = Paths.get("germany-latest.osm.pois.geojson"); //TODO:comment
 		
 		Path destFile = Paths.get("testpois.linedelimited.resolved.geojson"); 
 		Files.deleteIfExists(destFile);
