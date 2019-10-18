@@ -24,8 +24,10 @@ class GeofabrikIndexerTest {
 		assertTrue(index.getPBFFiles().notEmpty());
 		
 		assertThat(index.toString()).contains(".pbf");
+		
+		index.printDownloadURLs();
 	}
-
+	
 	@Test
 	void retrieveNextLevel() throws IOException {
 		DownloadIndex index = GeofabrikIndexer.getIndex();
@@ -35,6 +37,8 @@ class GeofabrikIndexerTest {
 		ImmutableList<URL> childrenPBFs = subIndex.getPBFFiles();
 
 		assertTrue(childrenPBFs.size() > parentPBFs.size());
+		
+		subIndex.printDownloadURLs();
 	}
 
 	@Test

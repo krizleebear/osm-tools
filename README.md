@@ -9,3 +9,6 @@ A Java tool reading OSM PBF files and writing POIs to geojson format. Comparable
 
 ## [Nominatim reverse geo coding](../../tree/master/src/main/java/net/leberfinger/osm/nominatim)
 Classes to connect to Nominatim and perform reverse geo coding queries. Offers cached resolvers with a throughput of millions of requests per minute. 
+
+## [Geofabrik downloads](../../tree/master/src/main/java/net/leberfinger/osm/geofabrik)
+List of download URLs for data extracts offered by Geofabrik. 

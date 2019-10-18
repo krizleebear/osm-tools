@@ -1,8 +1,10 @@
 package net.leberfinger.osm.geofabrik;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Path;
+import java.util.List;
 
 import org.eclipse.collections.api.list.ImmutableList;
 import org.eclipse.collections.api.list.MutableList;
@@ -49,6 +51,14 @@ public class GeofabrikIndexer {
 			builder.append("]");
 			return builder.toString();
 		}
+		
+		public void printDownloadURLs()
+		{
+			for(URL url : getPBFFiles())
+			{
+				System.out.println(url);
+			}
+		}
 
 		public DownloadIndex nextLevel() throws IOException {
 			DownloadIndex subIndex = new DownloadIndex();
@@ -72,22 +82,33 @@ public class GeofabrikIndexer {
 		DownloadIndex index = new DownloadIndex();
 		Document doc = Jsoup.connect(url.toString()).get();
 
+		removeDetailsDiv(doc);
+
+		Element subRegions = doc.getElementById("subregions");
+		List<URL> subRegionURLs = extractAbsoluteURLs(subRegions);
+
+		subRegionURLs.forEach(index::addURL);
+
+		return index;
+	}
+
+	private static List<URL> extractAbsoluteURLs(Element element) throws MalformedURLException {
+		List<URL> subRegionURLs = Lists.mutable.empty();
+		if (element != null) {
+			Elements links = element.getElementsByTag("a");
+			for (Element link : links) {
+				String absoluteURL = link.absUrl("href");
+				subRegionURLs.add(new URL(absoluteURL));
+			}
+		}
+		return subRegionURLs;
+	}
+
+	private static void removeDetailsDiv(Document doc) {
 		Element detailsDiv = doc.getElementById("details");
 		if (detailsDiv != null) {
 			detailsDiv.remove();
 		}
-
-		Element subRegions = doc.getElementById("subregions");
-		if (subRegions != null) {
-			Elements links = subRegions.getElementsByTag("a");
-			for (Element link : links) {
-				String absoluteURL = link.absUrl("href");
-				URL parsedURL = new URL(absoluteURL);
-				index.addURL(parsedURL);
-			}
-		}
-
-		return index;
 	}
 
 	public static boolean isHTML(URL url) {
