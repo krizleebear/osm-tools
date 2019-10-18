@@ -30,3 +30,5 @@ Osmium can be used to directly export the required polygons from a PBF file with
 osmium tags-filter --output admins.osm.pbf --overwrite ${INPUT_PBF} boundary=administrative
 osmium export admins.osm.pbf -o polygons.geojsonseq --omit-rs --overwrite --geometry-types=polygon
 ```
+
+You can find an example (pretty printed) geojson file of this process [here](../../tree/master/src/src/test/resources/polygon-palling-prettyprint.geojson)
