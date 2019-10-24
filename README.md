@@ -1,5 +1,5 @@
-# osm-tools
-Java tools to handle OpenStreetMap data.
+# osm-tools [![Build Status](https://travis-ci.org/krizleebear/osm-tools.svg?branch=master)](https://travis-ci.org/krizleebear/osm-tools)
+Java tools to handle OpenStreetMap data. 
 
 ## [Categories](../../tree/master/src/main/java/net/leberfinger/osm/categories)
 Category names for OSM POI categories (e.g. amenity/restaurant) in several languages.
