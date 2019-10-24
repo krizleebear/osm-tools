@@ -38,9 +38,9 @@ public class PolygonCache implements IAdminResolver {
 
 	private final STRtree index = new STRtree();
 	private final GeometryFactory geoFactory = new GeometryFactory();
+	private final PreparedGeometryFactory preparedGeoFactory = new PreparedGeometryFactory();
 
 	private final WKTReader wktReader = new WKTReader(geoFactory);
-	private final PreparedGeometryFactory preparedGeoFactory = new PreparedGeometryFactory();
 
 	/**
 	 * Import a file of line delimited GeoJSON objects.

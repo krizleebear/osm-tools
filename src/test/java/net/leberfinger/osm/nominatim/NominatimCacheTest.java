@@ -1,12 +1,17 @@
 package net.leberfinger.osm.nominatim;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
+@DisabledOnOs(OS.LINUX)
 class NominatimCacheTest {
 
 	@Test
@@ -14,6 +19,7 @@ class NominatimCacheTest {
 		NominatimCache cache = new NominatimCache();
 		Optional<AdminPlace> place = cache.resolve(48, 11);
 		
+		assertEquals(1, cache.getCacheSize());
 		assertTrue(place.isPresent());
 	}
 

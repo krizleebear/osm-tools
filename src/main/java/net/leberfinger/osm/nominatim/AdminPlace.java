@@ -15,7 +15,7 @@ public class AdminPlace {
 	private final JsonObject json;
 	private final long placeID;
 
-	AdminPlace(PreparedGeometry geometry, JsonObject json) {
+	public AdminPlace(PreparedGeometry geometry, JsonObject json) {
 		this.geometry = geometry;
 		this.json = json;
 		placeID = this.json.get("place_id").getAsLong();
