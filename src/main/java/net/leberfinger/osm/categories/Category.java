@@ -1,5 +1,7 @@
 package net.leberfinger.osm.categories;
 
+import java.util.function.BiConsumer;
+
 import org.eclipse.collections.api.multimap.set.MutableSetMultimap;
 import org.eclipse.collections.api.set.ImmutableSet;
 import org.eclipse.collections.impl.factory.Multimaps;
@@ -37,4 +39,23 @@ public class Category {
 		return builder.toString();
 	}
 
+	public int getCategoryID() {
+		return categoryID;
+	}
+
+	public String getOsmCategory() {
+		return osmCategory;
+	}
+
+	public void names(BiConsumer<String, String> action) {
+		namesForLang.forEachKeyValue((lang, name) -> {
+			action.accept(lang, name);
+		});
+	}
+
+	public void namesPerLanguage(BiConsumer<String, Iterable<String>> action) {
+		namesForLang.forEachKeyMultiValues((lang, names) -> {
+			action.accept(lang, names);
+		});
+	}
 }

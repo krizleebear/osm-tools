@@ -2,6 +2,7 @@ package net.leberfinger.osm.categories;
 
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.BiConsumer;
 
 import org.eclipse.collections.impl.factory.SortedMaps;
 
@@ -11,7 +12,7 @@ public class Categories {
 	private Map<String, Category> categories = SortedMaps.mutable.empty();
 
 	protected String combinedKey(String osmKey, String osmValue) {
-		return osmKey + "/" + osmValue;
+		return osmKey + "=" + osmValue;
 	}
 
 	public void add(String osmKey, String osmValue, String language, String name) {
@@ -49,5 +50,9 @@ public class Categories {
 			sb.append(System.lineSeparator());
 		}
 		return sb.toString();
+	}
+
+	public void foreach(BiConsumer<String, Category> action) {
+		categories.forEach(action);
 	}
 }
