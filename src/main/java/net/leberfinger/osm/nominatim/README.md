@@ -31,4 +31,4 @@ osmium tags-filter --output admins.osm.pbf --overwrite ${INPUT_PBF} boundary=adm
 osmium export admins.osm.pbf -o polygons.geojsonseq --omit-rs --overwrite --geometry-types=polygon
 ```
 
-You can find an example (pretty printed) geojson file of this process [here](../../tree/master/src/src/test/resources/polygon-palling-prettyprint.geojson)
+You can find an example (pretty printed) geojson file of this process [here](https://github.com/krizleebear/osm-tools/blob/master/src/test/resources/polygon-palling-prettyprint.geojson)
