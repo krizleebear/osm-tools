@@ -11,8 +11,8 @@ pool:
   vmImage: 'ubuntu-latest'
 
 steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+- script: env
+  displayName: 'print env'
 
 - script: |
     echo Add other tasks to build, test, and deploy your project.
@@ -31,6 +31,6 @@ steps:
 
 - task: PublishPipelineArtifact@1
   inputs:
-    targetPath: '$(Pipeline.Workspace)/target'
+    targetPath: '$(Build.SourcesDirectory)/target'
     artifact: 'osm-tools-jars'
     publishLocation: 'pipeline'
