@@ -3,6 +3,7 @@ package net.leberfinger.osm.nominatim;
 import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -16,11 +17,13 @@ import org.junit.jupiter.api.Test;
 import org.locationtech.jts.io.ParseException;
 
 import com.google.common.base.Stopwatch;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 class GeoJSONResolverTest {
 
-	private static final String NOMINATIM_BASE_URL = "http://192.168.43.201:7070/";
+	public static final String NOMINATIM_BASE_URL = "http://192.168.43.201:7070/";
 	public static final String TEST_RESOURCES_DIR = "src/test/resources"; 
 	
 	@Test
@@ -37,6 +40,16 @@ class GeoJSONResolverTest {
 		assertTrue(properties.has("addr:city"));
 		assertEquals("Palling", properties.get("addr:city").getAsString());
 	}
+	
+	@Test
+	void getCoordinateFromMultiPolygon()
+	{
+		String json = "{\"type\":\"Feature\",\"geometry\":{\"type\":\"MultiPolygon\",\"coordinates\":[[[[11.9015747,48.1944249],[11.9018061,48.1940296],[11.903141,48.1941765],[11.9028803,48.1946951],[11.9015747,48.1944249]]]]},\"properties\":{\"@type\":\"way\",\"@id\":3401789,\"sport\":\"horse_jumping\",\"leisure\":\"pitch\",\"surface\":\"grass\"}}";
+		
+		JsonParser parser = new JsonParser();
+		JsonArray coordinate = GeoJSONResolver.getCoordinate(parser.parse(json).getAsJsonObject());
+		assertThat(coordinate).hasSize(2);
+	}
 
 	@Test
 	void resolveFile() throws IOException, ParseException
@@ -46,6 +59,7 @@ class GeoJSONResolverTest {
 		Path input = Paths.get(TEST_RESOURCES_DIR, "testpois.linedelimited.geojson");
 //		input = Paths.get("oberbayern-latest.osm.pois.geojson"); //TODO:comment
 //		input = Paths.get("germany-latest.osm.pois.geojson"); //TODO:comment
+//		input = Paths.get("filtered.pois.geojsonseq"); //TODO:comment
 		
 		Path destFile = Paths.get("testpois.linedelimited.resolved.geojson"); 
 		Files.deleteIfExists(destFile);

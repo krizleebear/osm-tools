@@ -64,7 +64,7 @@ public class GeoJSONResolver {
 	 * GeoJSON properties might be stored as property "properties" or "tags".
 	 * Normalize to the official standard "properties".
 	 */
-	private static JsonObject getProperties(JsonObject json) {
+	public static JsonObject getProperties(JsonObject json) {
 
 		JsonElement props = json.get("properties");
 
@@ -85,7 +85,7 @@ public class GeoJSONResolver {
 	 * @param json
 	 * @return
 	 */
-	private JsonArray getCoordinate(JsonObject json) {
+	public static JsonArray getCoordinate(JsonObject json) {
 
 		JsonArray coordinates = new JsonArray();
 		
@@ -107,7 +107,16 @@ public class GeoJSONResolver {
 		{
 			JsonObject geometry = json.get("geometry").getAsJsonObject();
 			JsonArray geometryCoordinates = geometry.get("coordinates").getAsJsonArray();
-			coordinates = geometryCoordinates.get(0).getAsJsonArray();
+			
+			if ("Point".equals(geometry.get("type").getAsString())) {
+				coordinates = geometryCoordinates;
+			} else if ("MultiPolygon".equals(geometry.get("type").getAsString())) {
+				coordinates = geometryCoordinates.get(0).getAsJsonArray();
+				coordinates = coordinates.get(0).getAsJsonArray();
+				coordinates = coordinates.get(0).getAsJsonArray();
+			} else {
+				coordinates = geometryCoordinates.get(0).getAsJsonArray();
+			}
 		}
 		
 		return coordinates;
