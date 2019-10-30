@@ -3,7 +3,6 @@ package net.leberfinger.osm.nominatim;
 import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -17,9 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.locationtech.jts.io.ParseException;
 
 import com.google.common.base.Stopwatch;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 class GeoJSONResolverTest {
 
@@ -32,7 +29,6 @@ class GeoJSONResolverTest {
 		String jsonString = "{\"id\":120915427,\"type\":\"way\",\"properties\":{\"amenity\":\"place_of_worship\",\"building\":\"church\",\"denomination\":\"catholic\",\"name\":\"Mariä Geburt\",\"religion\":\"christian\",\"wheelchair\":\"no\"},\"centroid\":{\"lat\":\"48.0010465\",\"lon\":\"12.6383187\"},\"bounds\":{\"e\":\"12.6386123\",\"n\":\"48.0011875\",\"s\":\"48.0009058\",\"w\":\"12.6378228\"}}";
 		assertFalse(jsonString.contains("addr:"));
 		
-//		GeoJSONResolver resolver = new GeoJSONResolver(NOMINATIM_BASE_URL);
 		GeoJSONResolver resolver = new GeoJSONResolver(getExampleResolver());
 		JsonObject resolved = resolver.addAddress(jsonString);
 		
@@ -42,31 +38,15 @@ class GeoJSONResolverTest {
 	}
 	
 	@Test
-	void getCoordinateFromMultiPolygon()
-	{
-		String json = "{\"type\":\"Feature\",\"geometry\":{\"type\":\"MultiPolygon\",\"coordinates\":[[[[11.9015747,48.1944249],[11.9018061,48.1940296],[11.903141,48.1941765],[11.9028803,48.1946951],[11.9015747,48.1944249]]]]},\"properties\":{\"@type\":\"way\",\"@id\":3401789,\"sport\":\"horse_jumping\",\"leisure\":\"pitch\",\"surface\":\"grass\"}}";
-		
-		JsonParser parser = new JsonParser();
-		JsonArray coordinate = GeoJSONResolver.getCoordinate(parser.parse(json).getAsJsonObject());
-		assertThat(coordinate).hasSize(2);
-	}
-
-	@Test
 	void resolveFile() throws IOException, ParseException
 	{
 		Stopwatch w = Stopwatch.createStarted();
 		
 		Path input = Paths.get(TEST_RESOURCES_DIR, "testpois.linedelimited.geojson");
-//		input = Paths.get("oberbayern-latest.osm.pois.geojson"); //TODO:comment
-//		input = Paths.get("germany-latest.osm.pois.geojson"); //TODO:comment
-//		input = Paths.get("filtered.pois.geojsonseq"); //TODO:comment
 		
 		Path destFile = Paths.get("testpois.linedelimited.resolved.geojson"); 
 		Files.deleteIfExists(destFile);
 		
-//		GeoJSONResolver resolver = new GeoJSONResolver(NOMINATIM_BASE_URL);
-//		GeoJSONResolver resolver = new GeoJSONResolver(getPolygonResolver());
-//		GeoJSONResolver resolver = new GeoJSONResolver(getOsmiumPolygonResolver());
 		GeoJSONResolver resolver = new GeoJSONResolver(getExampleResolver());
 		
 		resolver.resolveLinesInFile(input);
@@ -79,17 +59,10 @@ class GeoJSONResolverTest {
 		assertTrue(Files.size(destFile) > 0);
 	}
 	
-	public static IAdminResolver getExampleResolver() {
-		PolygonCache polys = new PolygonCache();
+	public static IAdminResolver getExampleResolver() throws IOException, ParseException {
 
 		Path dumpFile = Paths.get(TEST_RESOURCES_DIR, "polygon-palling.geojsonseq");
-		try (Reader r = Files.newBufferedReader(dumpFile, StandardCharsets.UTF_8)) {
-			polys.importGeoJSONStream(r);
-		} catch (IOException | ParseException e) {
-			throw new RuntimeException(e);
-		}
-
-		return polys;
+		return PolygonCache.fromGeoJSONStream(dumpFile);
 	}
 	
 	public IAdminResolver getPostGISDumpResolver() throws IOException, ParseException
@@ -104,16 +77,9 @@ class GeoJSONResolverTest {
 		return polys;
 	}
 	
-	public IAdminResolver getOsmiumPolygonResolver() throws IOException, ParseException
+	public static IAdminResolver getOsmiumPolygonResolver() throws IOException, ParseException
 	{
-		PolygonCache polys = new PolygonCache();
-		
-		Path dumpFile = Paths.get("polygons.geojsonseq");
-		try (Reader r = Files.newBufferedReader(dumpFile, StandardCharsets.UTF_8)) {
-			polys.importGeoJSONStream(r);
-		}
-
-		return polys;
+		return PolygonCache.fromGeoJSONStream(Paths.get("polygons.geojsonseq"));	
 	}
 
 }

@@ -4,6 +4,10 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 
@@ -42,6 +46,17 @@ public class PolygonCache implements IAdminResolver {
 
 	private final WKTReader wktReader = new WKTReader(geoFactory);
 
+	public static PolygonCache fromGeoJSONStream(Path polygonFile) throws IOException, ParseException
+	{
+		PolygonCache polys = new PolygonCache();
+		
+		try (Reader r = Files.newBufferedReader(polygonFile, StandardCharsets.UTF_8)) {
+			polys.importGeoJSONStream(r);
+		}
+
+		return polys;
+	}
+	
 	/**
 	 * Import a file of line delimited GeoJSON objects.
 	 * <p/>

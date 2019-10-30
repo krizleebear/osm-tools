@@ -10,11 +10,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import org.apache.commons.io.FilenameUtils;
+import org.locationtech.jts.io.ParseException;
 
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+
+import joptsimple.OptionParser;
+import joptsimple.OptionSet;
+import net.leberfinger.geo.GeoJSONUtils;
 
 public class GeoJSONResolver {
 
@@ -27,11 +31,6 @@ public class GeoJSONResolver {
 	JsonParser parser = new JsonParser();
 	private final IAdminResolver resolver;
 
-	public GeoJSONResolver(String nominatimBaseURL) {
-		NominatimConnection nominatim = new NominatimConnection(nominatimBaseURL);
-		resolver = new NominatimCache(nominatim);
-	}
-	
 	public GeoJSONResolver(IAdminResolver resolver)
 	{
 		this.resolver = resolver;
@@ -40,14 +39,14 @@ public class GeoJSONResolver {
 	public JsonObject addAddress(String geoJSON) throws IOException {
 		JsonObject json = parser.parse(geoJSON).getAsJsonObject();
 		
-		JsonArray coordinate = getCoordinate(json);
+		JsonArray coordinate = GeoJSONUtils.getCoordinate(json);
 		
 		double lon = coordinate.get(0).getAsDouble();
 		double lat = coordinate.get(1).getAsDouble();
 
 		Optional<AdminPlace> resolvedPlace = resolver.resolve(lat, lon);
 		
-		JsonObject properties = getProperties(json);
+		JsonObject properties = GeoJSONUtils.getProperties(json);
 
 		if (resolvedPlace.isPresent()) {
 			resolvedPlace.get().addMissingAddressProperties(properties);
@@ -60,68 +59,6 @@ public class GeoJSONResolver {
 		return json;
 	}
 	
-	/**
-	 * GeoJSON properties might be stored as property "properties" or "tags".
-	 * Normalize to the official standard "properties".
-	 */
-	public static JsonObject getProperties(JsonObject json) {
-
-		JsonElement props = json.get("properties");
-
-		if (props == null) {
-			props = json.get("tags");
-		}
-
-		if (props == null) {
-			props = new JsonObject();
-		}
-
-		return props.getAsJsonObject();
-	}
-	
-
-	/**
-	 * note: in x/y order (means: lon/lat)
-	 * @param json
-	 * @return
-	 */
-	public static JsonArray getCoordinate(JsonObject json) {
-
-		JsonArray coordinates = new JsonArray();
-		
-		//e.g. {"id":359829,"type":"node","lat":50.9049155,"lon":6.963953500000001,"tags":{"amenity":"car_rental","name":"Starcar Autovermietung"}}
-
-		if(json.has("lat") && json.has("lon"))
-		{
-			coordinates.add(json.get("lon"));
-			coordinates.add(json.get("lat"));
-		}
-		else if(json.has("centroid"))
-		{
-			//{"id":4408507,"type":"way","tags":{"amenity":"parking"},"centroid":{"lat":"49.0393827","lon":"8.3355651"},"bounds":{"e":"8.3358719","n":"49.0395493","s":"49.0391033","w":"8.3351585"}}
-			JsonObject centroid = json.get("centroid").getAsJsonObject();
-			coordinates.add(centroid.get("lon"));
-			coordinates.add(centroid.get("lat"));
-		}
-		else if(json.has("geometry"))
-		{
-			JsonObject geometry = json.get("geometry").getAsJsonObject();
-			JsonArray geometryCoordinates = geometry.get("coordinates").getAsJsonArray();
-			
-			if ("Point".equals(geometry.get("type").getAsString())) {
-				coordinates = geometryCoordinates;
-			} else if ("MultiPolygon".equals(geometry.get("type").getAsString())) {
-				coordinates = geometryCoordinates.get(0).getAsJsonArray();
-				coordinates = coordinates.get(0).getAsJsonArray();
-				coordinates = coordinates.get(0).getAsJsonArray();
-			} else {
-				coordinates = geometryCoordinates.get(0).getAsJsonArray();
-			}
-		}
-		
-		return coordinates;
-	}
-
 	/**
 	 * Resolve all geo json entries in the given file, assuming that a full geo json
 	 * object is contained in a single line.
@@ -160,9 +97,32 @@ public class GeoJSONResolver {
 		return resolver.getStatistics();
 	}
 	
-	public static void main(String[] args) throws IOException {
-		String nominatimBaseURL = "";
-		GeoJSONResolver resolver = new GeoJSONResolver(nominatimBaseURL);
-		resolver.resolveLinesInFile(Paths.get(args[0]));
+	public static void main(String[] args) throws IOException, ParseException {
+		
+		OptionParser parser = new OptionParser(); 
+		
+		parser.accepts("poly-file") //
+				.withRequiredArg().ofType(String.class) //
+				.describedAs("input geojsonseq with admin polygons");
+
+		parser.accepts("input-file") //
+				.withRequiredArg().ofType(String.class) //
+				.describedAs("input geojsonseq with POIs");
+
+		OptionSet options = parser.parse(args);
+		
+		System.out.println(options.asMap());
+		
+		if (args.length < 2) {
+			parser.printHelpOn(System.err);
+			throw new RuntimeException("Missing args.");
+		}
+        
+		Path polygonFile = Paths.get(options.valueOf("poly-file").toString());
+		Path inputFile = Paths.get(options.valueOf("input-file").toString());
+
+		PolygonCache polygons = PolygonCache.fromGeoJSONStream(polygonFile);
+		GeoJSONResolver resolver = new GeoJSONResolver(polygons);
+		resolver.resolveLinesInFile(inputFile);
 	}
 }
