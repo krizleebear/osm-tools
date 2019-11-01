@@ -7,7 +7,6 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 
@@ -99,7 +98,7 @@ public class PolygonCache implements IAdminResolver {
 					//TODO: ignore the whole polygon for now
 					continue;
 				}
-				
+				 
 				String geometryJSON = json.remove("geometry").toString();
 
 				Geometry geometry = geoReader.read(geometryJSON);

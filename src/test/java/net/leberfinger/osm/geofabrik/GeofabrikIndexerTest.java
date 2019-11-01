@@ -7,8 +7,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 
 import org.eclipse.collections.api.list.ImmutableList;
 import org.junit.jupiter.api.Test;
@@ -60,5 +62,36 @@ class GeofabrikIndexerTest {
 		assertThat(empty).isEmpty();
 		
 		assertThat(GeofabrikIndexer.removeLeadingSlash("")).isEmpty();
+	}
+	
+	@Test
+	void getCountryName() throws MalformedURLException
+	{
+		String ireland = "https://download.geofabrik.de/europe/ireland-and-northern-ireland-latest.osm.pbf";
+		String irelandName = GeofabrikIndexer.getCountryNameFromURL(ireland);
+		assertThat(irelandName).isEqualTo("ireland-and-northern-ireland");
+		
+		String californiaURL = "https://download.geofabrik.de/north-america/us/california-latest.osm.pbf";
+		String californiaName = GeofabrikIndexer.getCountryNameFromURL(californiaURL);
+		assertThat(californiaName).isEqualTo("california");
+	}
+	
+	@Test
+	void writeCountryIndex() throws IOException
+	{
+		Path p = Paths.get("geofabrik-country-links.txt");
+		GeofabrikIndexer.writeCountryIndex(p);
+		
+		List<String> countryMappings = Files.readAllLines(p);
+		for(String line : countryMappings)
+		{
+			assertThat(line).containsOnlyOnce("=");
+			String[] mapping = line.split("=");
+			String countryName = mapping[0];
+			String countryURL = mapping[1];
+			
+			assertThat(countryName).doesNotContain(".");
+			assertThat(countryURL).startsWith("http");
+		}
 	}
 }

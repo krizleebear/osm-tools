@@ -3,7 +3,9 @@ package net.leberfinger.osm.geofabrik;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 import org.eclipse.collections.api.list.ImmutableList;
@@ -130,5 +132,55 @@ public class GeofabrikIndexer {
 			return s.substring(1);
 		}
 		return s;
+	}
+	
+	/**
+	 * Retrieve all download URLs for the second level of Geofabrik's index. This is
+	 * generally the 'country level', but for example US, its federal states are
+	 * being listed instead.
+	 * 
+	 * @return
+	 * @throws IOException
+	 */
+	public static DownloadIndex getCountryIndex() throws IOException
+	{
+		DownloadIndex index = GeofabrikIndexer.getIndex();
+		DownloadIndex countryIndex = index.nextLevel();
+		return countryIndex;
+	}
+	
+	public static String getCountryNameFromURL(String url) throws MalformedURLException
+	{
+		return getCountryNameFromURL(new URL(url));
+	}
+	
+	public static String getCountryNameFromURL(URL url)
+	{
+		String path = url.getPath();
+		int directoryEndIndex = path.lastIndexOf("/");
+		path = path.substring(directoryEndIndex + 1);
+		
+		int suffixIndex = path.lastIndexOf("-latest");
+		path = path.substring(0, suffixIndex);
+		
+		return path;
+	}
+
+	public static void writeCountryIndex(Path p) throws IOException {
+		DownloadIndex countryIndex = getCountryIndex();
+		ImmutableList<URL> pbfFiles = countryIndex.getPBFFiles();
+
+		List<String> countryMappings = Lists.mutable.empty();
+		for (URL countryURL : pbfFiles) {
+			String countryName = getCountryNameFromURL(countryURL);
+			countryMappings.add(countryName + "=" + countryURL);
+		}
+		Files.write(p, countryMappings);
+	}
+	
+	public static void main(String[] args) throws IOException
+	{
+		Path p = Paths.get("geofabrik-country-links.txt");
+		GeofabrikIndexer.writeCountryIndex(p);
 	}
 }
