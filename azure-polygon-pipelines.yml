@@ -48,7 +48,6 @@ jobs:
       itemPattern: '**/$(OSM_REGION).osm.pbf'
       downloadPath: '$(System.DefaultWorkingDirectory)'
 
-
   - task: Bash@3
     inputs:
       targetType: 'inline'
@@ -56,23 +55,14 @@ jobs:
         set -x
         ls -la
         pwd
-        echo $(PBF_URL)
         osmium --version
-        #TODO: call the real scripts
-        # the empty files are only place holders to test publishing
-        #touch $(OSM_REGION).admin-polygons.geojsonseq
 
-        INPUT_PBF=$(OSM_REGION).osm.pbf
+        INPUT_PBF=osm-data/$(OSM_REGION).osm.pbf
         ADMIN_PBF=$(OSM_REGION).admins.pbf
         POLYGON_JSON=$(OSM_REGION).admin-polygons.geojsonseq
 
-        touch ${INPUT_PBF}
-        touch ${ADMIN_PBF}
-        touch ${POLYGON_JSON}
-
-        #wget --no-verbose --output-document=${INPUT_PBF} $(PBF_URL)
-        #osmium tags-filter --output ${ADMIN_PBF} --overwrite ${INPUT_PBF} boundary=administrative
-        #osmium export ${ADMIN_PBF} --output=${POLYGON_JSON} --omit-rs --overwrite #--geometry-types=polygon
+        osmium tags-filter --output ${ADMIN_PBF} --overwrite ${INPUT_PBF} boundary=administrative
+        osmium export ${ADMIN_PBF} --output=${POLYGON_JSON} --omit-rs --overwrite #--geometry-types=polygon
 
   - task: PublishBuildArtifacts@1
     enabled: false
