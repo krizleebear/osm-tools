@@ -4,6 +4,9 @@
 
 name: polygon-pipeline
 
+variables:
+  imageName: 'polygon-export-docker'
+
 trigger:
 # - master
 - none
@@ -14,6 +17,10 @@ pool:
 jobs:
 - job: prepare
   #TODO: build container for later jobs
+
+
+
+
 - job: export
   strategy:
     matrix:
@@ -41,9 +48,15 @@ jobs:
         osmium --version
         #TODO: call the real scripts
         # the empty files are only place holders to test publishing
-        touch $(OSM_REGION).osm.pbf
-        touch $(OSM_REGION).admins.pbf
-        touch $(OSM_REGION).admin-polygons.geojsonseq
+        #touch $(OSM_REGION).admin-polygons.geojsonseq
+
+        INPUT_PBF=$(OSM_REGION).osm.pbf
+        ADMIN_PBF=$(OSM_REGION).admins.pbf
+        POLYGON_JSON=$(OSM_REGION).admin-polygons.geojsonseq
+
+        wget --output-document=$(OSM_REGION).osm.pbf $(PBF_URL)
+        osmium tags-filter --output ${ADMIN_PBF} --overwrite ${INPUT_PBF} boundary=administrative
+        osmium export ${ADMIN_PBF} --output=${POLYGON_JSON} --omit-rs --overwrite #--geometry-types=polygon
 
   - task: PublishBuildArtifacts@1
     inputs:
