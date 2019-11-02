@@ -2,6 +2,8 @@
 # Exports polygons of localities to geoJSON streams.
 # https://aka.ms/yaml
 
+name: polygon-pipeline
+
 trigger:
 # - master
 - none
@@ -10,26 +12,21 @@ pool:
   vmImage: 'ubuntu-latest'
 
 jobs:
-- job: prepare
-  displayName: install tools etc...
-
-  steps:
-
-  - script: |
-      echo Install osmium
-      sudo apt-get update
-      sudo apt install -y osmium-tool
-      osmium --version
-    displayName: 'install tools'
-
 - job: export
   strategy:
     matrix:
+      #TODO: populate matrix config programatically
       obb:
         PBF_URL: 'http://download.geofabrik.de/europe/germany/bayern/oberbayern-latest.osm.pbf'
       de:
         PBF_URL: 'https://download.geofabrik.de/europe/germany-latest.osm.pbf'
   steps:
+  - script: |
+      echo Install osmium
+      sudo apt-get update
+      sudo apt install -y osmium-tool
+      osmium --version
+
   - task: Bash@3
     inputs:
       targetType: 'inline'
