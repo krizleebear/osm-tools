@@ -16,6 +16,7 @@ pool:
 
 jobs:
 - job: prepare
+  condition: false
   #TODO: build container for later jobs
   steps:
   - script: |
@@ -26,7 +27,7 @@ jobs:
       EOF
 
 - job: export
-  container: polygon-export-docker:latest
+  container: krizleebear/docker-osmium-tool
   strategy:
     matrix:
       #TODO: populate matrix config programatically
@@ -44,6 +45,7 @@ jobs:
       sudo apt-get update
       sudo apt install -y osmium-tool
       osmium --version
+    enabled: false
 
   - task: DownloadBuildArtifacts@0
     inputs:
