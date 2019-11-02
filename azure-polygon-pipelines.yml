@@ -27,7 +27,10 @@ jobs:
       EOF
 
 - job: export
-  container: krizleebear/docker-osmium-tool
+  container: 
+    image: krizleebear/docker-osmium-tool
+    endpoint: docker-krizleebear
+
   strategy:
     matrix:
       #TODO: populate matrix config programatically
