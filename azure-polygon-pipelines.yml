@@ -12,13 +12,17 @@ pool:
   vmImage: 'ubuntu-latest'
 
 jobs:
+- job: prepare
+  #TODO: build container for later jobs
 - job: export
   strategy:
     matrix:
       #TODO: populate matrix config programatically
       obb:
+        OSM_REGION: 'oberbayern'
         PBF_URL: 'http://download.geofabrik.de/europe/germany/bayern/oberbayern-latest.osm.pbf'
       de:
+        OSM_REGION: 'germany'
         PBF_URL: 'https://download.geofabrik.de/europe/germany-latest.osm.pbf'
   steps:
   - script: |
@@ -32,5 +36,17 @@ jobs:
       targetType: 'inline'
       script: |
         # Write your commands here
+        pwd
         echo $(PBF_URL)
         osmium --version
+        #TODO: call the real scripts
+        # the empty files are only place holders to test publishing
+        touch $(OSM_REGION).osm.pbf
+        touch $(OSM_REGION).admins.pbf
+        touch $(OSM_REGION).admin-polygons.geojsonseq
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      PathtoPublish: '$(OSM_REGION).admin-polygons.geojsonseq'
+      ArtifactName: 'polygons'
+      publishLocation: 'Container'
