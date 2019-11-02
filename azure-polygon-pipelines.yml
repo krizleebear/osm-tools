@@ -17,9 +17,16 @@ pool:
 jobs:
 - job: prepare
   #TODO: build container for later jobs
-
+  steps:
+  - script: |
+      set -x
+      docker build -t polygon-export-docker:latest -<<EOF
+      FROM ubuntu:18.04
+      RUN apt-get update && apt-get install -y osmium-tool
+      EOF
 
 - job: export
+  container: polygon-export-docker:latest
   strategy:
     matrix:
       #TODO: populate matrix config programatically
@@ -49,6 +56,7 @@ jobs:
       downloadPath: '$(System.DefaultWorkingDirectory)'
 
   - task: Bash@3
+    displayName: 'filter and export polygons'
     inputs:
       targetType: 'inline'
       script: |
