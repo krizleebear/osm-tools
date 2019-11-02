@@ -33,6 +33,7 @@ jobs:
         PBF_URL: 'https://download.geofabrik.de/europe/germany-latest.osm.pbf'
   steps:
   - script: |
+      set -x
       echo Install osmium
       sudo apt-get update
       sudo apt install -y osmium-tool
@@ -42,7 +43,8 @@ jobs:
     inputs:
       targetType: 'inline'
       script: |
-        # Write your commands here
+        set -x
+        ls -la
         pwd
         echo $(PBF_URL)
         osmium --version
@@ -54,11 +56,16 @@ jobs:
         ADMIN_PBF=$(OSM_REGION).admins.pbf
         POLYGON_JSON=$(OSM_REGION).admin-polygons.geojsonseq
 
-        wget --output-document=$(OSM_REGION).osm.pbf $(PBF_URL)
-        osmium tags-filter --output ${ADMIN_PBF} --overwrite ${INPUT_PBF} boundary=administrative
-        osmium export ${ADMIN_PBF} --output=${POLYGON_JSON} --omit-rs --overwrite #--geometry-types=polygon
+        touch ${INPUT_PBF}
+        touch ${ADMIN_PBF}
+        touch ${POLYGON_JSON}
+
+        #wget --no-verbose --output-document=${INPUT_PBF} $(PBF_URL)
+        #osmium tags-filter --output ${ADMIN_PBF} --overwrite ${INPUT_PBF} boundary=administrative
+        #osmium export ${ADMIN_PBF} --output=${POLYGON_JSON} --omit-rs --overwrite #--geometry-types=polygon
 
   - task: PublishBuildArtifacts@1
+    enabled: false
     inputs:
       PathtoPublish: '$(OSM_REGION).admin-polygons.geojsonseq'
       ArtifactName: 'polygons'
