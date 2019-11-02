@@ -32,7 +32,7 @@ jobs:
         wget --no-verbose --output-document=$(OSM_REGION).osm.pbf $(PBF_URL)
 
   - task: PublishBuildArtifacts@1
-    enabled: false
+    enabled: true
     inputs:
       PathtoPublish: '$(OSM_REGION).osm.pbf'
       ArtifactName: 'osm-data'
