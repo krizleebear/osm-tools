@@ -19,8 +19,6 @@ jobs:
   #TODO: build container for later jobs
 
 
-
-
 - job: export
   strategy:
     matrix:
@@ -31,6 +29,7 @@ jobs:
       de:
         OSM_REGION: 'germany'
         PBF_URL: 'https://download.geofabrik.de/europe/germany-latest.osm.pbf'
+  
   steps:
   - script: |
       set -x
@@ -38,6 +37,17 @@ jobs:
       sudo apt-get update
       sudo apt install -y osmium-tool
       osmium --version
+
+  - task: DownloadBuildArtifacts@0
+    inputs:
+      buildType: 'specific'
+      project: 'f85b0393-1484-487a-b6d1-5120b54a70be'
+      pipeline: '3'
+      buildVersionToDownload: 'latest'
+      downloadType: 'specific'
+      itemPattern: '**/$(OSM_REGION).osm.pbf'
+      downloadPath: '$(System.DefaultWorkingDirectory)'
+
 
   - task: Bash@3
     inputs:
