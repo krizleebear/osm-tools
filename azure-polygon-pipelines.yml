@@ -1,0 +1,39 @@
+# OSM polygon export pipeline
+# Exports polygons of localities to geoJSON streams.
+# https://aka.ms/yaml
+
+trigger:
+# - master
+- none
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+jobs:
+- job: prepare
+  displayName: install tools etc...
+
+  steps:
+
+  - script: |
+      echo Install osmium
+      sudo apt-get update
+      sudo apt install -y osmium-tool
+      osmium --version
+    displayName: 'install tools'
+
+- job: export
+  strategy:
+    matrix:
+      obb:
+        PBF_URL: 'http://download.geofabrik.de/europe/germany/bayern/oberbayern-latest.osm.pbf'
+      de:
+        PBF_URL: 'https://download.geofabrik.de/europe/germany-latest.osm.pbf'
+  steps:
+  - task: Bash@3
+    inputs:
+      targetType: 'inline'
+      script: |
+        # Write your commands here
+        echo $(PBF_URL)
+        osmium --version
