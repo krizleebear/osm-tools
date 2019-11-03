@@ -1,0 +1,85 @@
+# OSM polygon export pipeline
+# Exports polygons of localities to geoJSON streams.
+# https://aka.ms/yaml
+
+name: polygon-pipeline
+
+variables:
+  imageName: 'polygon-export-docker'
+
+trigger:
+# - master
+- none
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+jobs:
+- job: prepare
+  condition: false
+  #TODO: build container for later jobs
+  steps:
+  - script: |
+      set -x
+      docker build -t polygon-export-docker:latest -<<EOF
+      FROM ubuntu:18.04
+      RUN apt-get update && apt-get install -y osmium-tool
+      EOF
+
+- job: export
+  container: 
+    image: krizleebear/docker-osmium-tool
+    endpoint: docker-krizleebear
+
+  strategy:
+    matrix:
+      #TODO: populate matrix config programatically
+      obb:
+        OSM_REGION: 'oberbayern'
+        PBF_URL: 'http://download.geofabrik.de/europe/germany/bayern/oberbayern-latest.osm.pbf'
+      de:
+        OSM_REGION: 'germany'
+        PBF_URL: 'https://download.geofabrik.de/europe/germany-latest.osm.pbf'
+  
+  steps:
+  - script: |
+      set -x
+      echo Install osmium
+      sudo apt-get update
+      sudo apt install -y osmium-tool
+      osmium --version
+    enabled: false
+
+  - task: DownloadBuildArtifacts@0
+    inputs:
+      buildType: 'specific'
+      project: 'f85b0393-1484-487a-b6d1-5120b54a70be'
+      pipeline: '3'
+      buildVersionToDownload: 'latest'
+      downloadType: 'specific'
+      itemPattern: '**/$(OSM_REGION).osm.pbf'
+      downloadPath: '$(System.DefaultWorkingDirectory)'
+
+  - task: Bash@3
+    displayName: 'filter and export polygons'
+    inputs:
+      targetType: 'inline'
+      script: |
+        set -x
+        ls -la
+        pwd
+        osmium --version
+
+        INPUT_PBF=osm-data/$(OSM_REGION).osm.pbf
+        ADMIN_PBF=$(OSM_REGION).admins.pbf
+        POLYGON_JSON=$(OSM_REGION).admin-polygons.geojsonseq
+
+        osmium tags-filter --output ${ADMIN_PBF} --overwrite ${INPUT_PBF} boundary=administrative
+        osmium export ${ADMIN_PBF} --output=${POLYGON_JSON} --omit-rs --overwrite #--geometry-types=polygon
+
+  - task: PublishBuildArtifacts@1
+    enabled: true
+    inputs:
+      PathtoPublish: '$(OSM_REGION).admin-polygons.geojsonseq'
+      ArtifactName: 'polygons'
+      publishLocation: 'Container'
