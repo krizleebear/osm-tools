@@ -78,7 +78,7 @@ jobs:
         osmium export ${ADMIN_PBF} --output=${POLYGON_JSON} --omit-rs --overwrite #--geometry-types=polygon
 
   - task: PublishBuildArtifacts@1
-    enabled: false
+    enabled: true
     inputs:
       PathtoPublish: '$(OSM_REGION).admin-polygons.geojsonseq'
       ArtifactName: 'polygons'
