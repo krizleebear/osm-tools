@@ -18,15 +18,153 @@ jobs:
     matrix:
       #TODO: populate matrix config programatically
       #TODO: share matrix between pipelines
-      obb:
-        OSM_REGION: 'oberbayern'
-        PBF_URL: 'http://download.geofabrik.de/europe/germany/bayern/oberbayern-latest.osm.pbf'
-      de:
-        OSM_REGION: 'germany'
-        PBF_URL: 'https://download.geofabrik.de/europe/germany-latest.osm.pbf'
-      at:
+      albania:
+        OSM_REGION: 'albania'
+        PBF_URL: 'https://download.geofabrik.de/europe/albania-latest.osm.pbf'
+      andorra:
+        OSM_REGION: 'andorra'
+        PBF_URL: 'https://download.geofabrik.de/europe/andorra-latest.osm.pbf'
+      austria:
         OSM_REGION: 'austria'
         PBF_URL: 'https://download.geofabrik.de/europe/austria-latest.osm.pbf'
+      azores:
+        OSM_REGION: 'azores'
+        PBF_URL: 'https://download.geofabrik.de/europe/azores-latest.osm.pbf'
+      belarus:
+        OSM_REGION: 'belarus'
+        PBF_URL: 'https://download.geofabrik.de/europe/belarus-latest.osm.pbf'
+      belgium:
+        OSM_REGION: 'belgium'
+        PBF_URL: 'https://download.geofabrik.de/europe/belgium-latest.osm.pbf'
+      bosnia-herzegovina:
+        OSM_REGION: 'bosnia-herzegovina'
+        PBF_URL: 'https://download.geofabrik.de/europe/bosnia-herzegovina-latest.osm.pbf'
+      bulgaria:
+        OSM_REGION: 'bulgaria'
+        PBF_URL: 'https://download.geofabrik.de/europe/bulgaria-latest.osm.pbf'
+      croatia:
+        OSM_REGION: 'croatia'
+        PBF_URL: 'https://download.geofabrik.de/europe/croatia-latest.osm.pbf'
+      cyprus:
+        OSM_REGION: 'cyprus'
+        PBF_URL: 'https://download.geofabrik.de/europe/cyprus-latest.osm.pbf'
+      czech-republic:
+        OSM_REGION: 'czech-republic'
+        PBF_URL: 'https://download.geofabrik.de/europe/czech-republic-latest.osm.pbf'
+      denmark:
+        OSM_REGION: 'denmark'
+        PBF_URL: 'https://download.geofabrik.de/europe/denmark-latest.osm.pbf'
+      estonia:
+        OSM_REGION: 'estonia'
+        PBF_URL: 'https://download.geofabrik.de/europe/estonia-latest.osm.pbf'
+      faroe-islands:
+        OSM_REGION: 'faroe-islands'
+        PBF_URL: 'https://download.geofabrik.de/europe/faroe-islands-latest.osm.pbf'
+      finland:
+        OSM_REGION: 'finland'
+        PBF_URL: 'https://download.geofabrik.de/europe/finland-latest.osm.pbf'
+      france:
+        OSM_REGION: 'france'
+        PBF_URL: 'https://download.geofabrik.de/europe/france-latest.osm.pbf'
+      georgia:
+        OSM_REGION: 'georgia'
+        PBF_URL: 'https://download.geofabrik.de/europe/georgia-latest.osm.pbf'
+      germany:
+        OSM_REGION: 'germany'
+        PBF_URL: 'https://download.geofabrik.de/europe/germany-latest.osm.pbf'
+      great-britain:
+        OSM_REGION: 'great-britain'
+        PBF_URL: 'https://download.geofabrik.de/europe/great-britain-latest.osm.pbf'
+      greece:
+        OSM_REGION: 'greece'
+        PBF_URL: 'https://download.geofabrik.de/europe/greece-latest.osm.pbf'
+      hungary:
+        OSM_REGION: 'hungary'
+        PBF_URL: 'https://download.geofabrik.de/europe/hungary-latest.osm.pbf'
+      iceland:
+        OSM_REGION: 'iceland'
+        PBF_URL: 'https://download.geofabrik.de/europe/iceland-latest.osm.pbf'
+      ireland-and-northern-ireland:
+        OSM_REGION: 'ireland-and-northern-ireland'
+        PBF_URL: 'https://download.geofabrik.de/europe/ireland-and-northern-ireland-latest.osm.pbf'
+      isle-of-man:
+        OSM_REGION: 'isle-of-man'
+        PBF_URL: 'https://download.geofabrik.de/europe/isle-of-man-latest.osm.pbf'
+      italy:
+        OSM_REGION: 'italy'
+        PBF_URL: 'https://download.geofabrik.de/europe/italy-latest.osm.pbf'
+      kosovo:
+        OSM_REGION: 'kosovo'
+        PBF_URL: 'https://download.geofabrik.de/europe/kosovo-latest.osm.pbf'
+      latvia:
+        OSM_REGION: 'latvia'
+        PBF_URL: 'https://download.geofabrik.de/europe/latvia-latest.osm.pbf'
+      liechtenstein:
+        OSM_REGION: 'liechtenstein'
+        PBF_URL: 'https://download.geofabrik.de/europe/liechtenstein-latest.osm.pbf'
+      lithuania:
+        OSM_REGION: 'lithuania'
+        PBF_URL: 'https://download.geofabrik.de/europe/lithuania-latest.osm.pbf'
+      luxembourg:
+        OSM_REGION: 'luxembourg'
+        PBF_URL: 'https://download.geofabrik.de/europe/luxembourg-latest.osm.pbf'
+      macedonia:
+        OSM_REGION: 'macedonia'
+        PBF_URL: 'https://download.geofabrik.de/europe/macedonia-latest.osm.pbf'
+      malta:
+        OSM_REGION: 'malta'
+        PBF_URL: 'https://download.geofabrik.de/europe/malta-latest.osm.pbf'
+      moldova:
+        OSM_REGION: 'moldova'
+        PBF_URL: 'https://download.geofabrik.de/europe/moldova-latest.osm.pbf'
+      monaco:
+        OSM_REGION: 'monaco'
+        PBF_URL: 'https://download.geofabrik.de/europe/monaco-latest.osm.pbf'
+      montenegro:
+        OSM_REGION: 'montenegro'
+        PBF_URL: 'https://download.geofabrik.de/europe/montenegro-latest.osm.pbf'
+      netherlands:
+        OSM_REGION: 'netherlands'
+        PBF_URL: 'https://download.geofabrik.de/europe/netherlands-latest.osm.pbf'
+      norway:
+        OSM_REGION: 'norway'
+        PBF_URL: 'https://download.geofabrik.de/europe/norway-latest.osm.pbf'
+      poland:
+        OSM_REGION: 'poland'
+        PBF_URL: 'https://download.geofabrik.de/europe/poland-latest.osm.pbf'
+      portugal:
+        OSM_REGION: 'portugal'
+        PBF_URL: 'https://download.geofabrik.de/europe/portugal-latest.osm.pbf'
+      romania:
+        OSM_REGION: 'romania'
+        PBF_URL: 'https://download.geofabrik.de/europe/romania-latest.osm.pbf'
+      russia:
+        OSM_REGION: 'russia'
+        PBF_URL: 'https://download.geofabrik.de/russia-latest.osm.pbf'
+      serbia:
+        OSM_REGION: 'serbia'
+        PBF_URL: 'https://download.geofabrik.de/europe/serbia-latest.osm.pbf'
+      slovakia:
+        OSM_REGION: 'slovakia'
+        PBF_URL: 'https://download.geofabrik.de/europe/slovakia-latest.osm.pbf'
+      slovenia:
+        OSM_REGION: 'slovenia'
+        PBF_URL: 'https://download.geofabrik.de/europe/slovenia-latest.osm.pbf'
+      spain:
+        OSM_REGION: 'spain'
+        PBF_URL: 'https://download.geofabrik.de/europe/spain-latest.osm.pbf'
+      sweden:
+        OSM_REGION: 'sweden'
+        PBF_URL: 'https://download.geofabrik.de/europe/sweden-latest.osm.pbf'
+      switzerland:
+        OSM_REGION: 'switzerland'
+        PBF_URL: 'https://download.geofabrik.de/europe/switzerland-latest.osm.pbf'
+      turkey:
+        OSM_REGION: 'turkey'
+        PBF_URL: 'https://download.geofabrik.de/europe/turkey-latest.osm.pbf'
+      ukraine:
+        OSM_REGION: 'ukraine'
+        PBF_URL: 'https://download.geofabrik.de/europe/ukraine-latest.osm.pbf'
   steps:
   - task: Bash@3
     inputs:
