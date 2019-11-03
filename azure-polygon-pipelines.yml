@@ -60,6 +60,13 @@ jobs:
       itemPattern: '**/$(OSM_REGION).osm.pbf'
       downloadPath: '$(System.DefaultWorkingDirectory)'
 
+#TODO: use this job instead, as changed in OSM-download pipeline already.
+- task: DownloadPipelineArtifact@2
+  enabled: false
+  inputs:
+    buildType: 'current'
+    targetPath: '$(Pipeline.Workspace)'
+
   - task: Bash@3
     displayName: 'filter and export polygons'
     inputs:
