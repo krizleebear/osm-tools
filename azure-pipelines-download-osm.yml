@@ -24,6 +24,9 @@ jobs:
       de:
         OSM_REGION: 'germany'
         PBF_URL: 'https://download.geofabrik.de/europe/germany-latest.osm.pbf'
+      at:
+        OSM_REGION: 'austria'
+        PBF_URL: 'https://download.geofabrik.de/europe/austria-latest.osm.pbf'
   steps:
   - task: Bash@3
     inputs:
