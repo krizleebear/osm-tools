@@ -4,8 +4,20 @@
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
 
+#trigger:
+#- master
+
 trigger:
-- master
+  batch: true
+  branches:
+    include:
+    - master
+    exclude:
+    - features/experimental/*
+  paths:
+    exclude:
+    - azure-pipelines-download-osm.yml
+    - azure-polygon-pipelines.yml
 
 pool:
   vmImage: 'ubuntu-latest'
