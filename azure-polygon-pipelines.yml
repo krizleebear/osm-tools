@@ -1,6 +1,5 @@
 # OSM polygon export pipeline
 # Exports polygons of localities to geoJSON streams.
-# https://aka.ms/yaml
 
 name: polygon-pipeline
 
@@ -8,23 +7,12 @@ variables:
   imageName: 'polygon-export-docker'
 
 trigger:
-# - master
 - none
 
 pool:
   vmImage: 'ubuntu-latest'
 
 jobs:
-- job: prepare
-  condition: false
-  #TODO: build container for later jobs
-  steps:
-  - script: |
-      set -x
-      docker build -t polygon-export-docker:latest -<<EOF
-      FROM ubuntu:18.04
-      RUN apt-get update && apt-get install -y osmium-tool
-      EOF
 
 - job: export
   container: 
@@ -49,18 +37,6 @@ jobs:
       sudo apt install -y osmium-tool
       osmium --version
     enabled: false
-
-#TODO: remove after DownloadPipelineArtifact is working.
-  - task: DownloadBuildArtifacts@0
-    enabled: false
-    inputs:
-      buildType: 'specific'
-      project: 'f85b0393-1484-487a-b6d1-5120b54a70be'
-      pipeline: '3'
-      buildVersionToDownload: 'latest'
-      downloadType: 'specific'
-      itemPattern: '**/$(OSM_REGION).osm.pbf'
-      downloadPath: '$(System.DefaultWorkingDirectory)'
 
   - task: DownloadPipelineArtifact@2
     enabled: true
@@ -88,14 +64,6 @@ jobs:
 
         osmium tags-filter --output ${ADMIN_PBF} --overwrite ${INPUT_PBF} boundary=administrative
         osmium export ${ADMIN_PBF} --output=${POLYGON_JSON} --omit-rs --overwrite #--geometry-types=polygon
-
-  # TODO: remove deprecated job
-  - task: PublishBuildArtifacts@1
-    enabled: false
-    inputs:
-      PathtoPublish: '$(OSM_REGION).admin-polygons.geojsonseq'
-      ArtifactName: 'polygons'
-      publishLocation: 'Container'
 
   - task: PublishPipelineArtifact@1
     enabled: true
