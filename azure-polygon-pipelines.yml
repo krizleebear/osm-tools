@@ -50,7 +50,9 @@ jobs:
       osmium --version
     enabled: false
 
+#TODO: remove after DownloadPipelineArtifact is working.
   - task: DownloadBuildArtifacts@0
+    enabled: false
     inputs:
       buildType: 'specific'
       project: 'f85b0393-1484-487a-b6d1-5120b54a70be'
@@ -60,12 +62,15 @@ jobs:
       itemPattern: '**/$(OSM_REGION).osm.pbf'
       downloadPath: '$(System.DefaultWorkingDirectory)'
 
-#TODO: use this job instead, as changed in OSM-download pipeline already.
   - task: DownloadPipelineArtifact@2
-    enabled: false
+    enabled: true
     inputs:
-      buildType: 'current'
-      targetPath: '$(Pipeline.Workspace)'
+      buildType: 'specific'
+      project: 'f85b0393-1484-487a-b6d1-5120b54a70be'
+      definition: '3'
+      buildVersionToDownload: 'latest'
+      itemPattern: '**/$(OSM_REGION).osm.pbf'
+      targetPath: '$(System.DefaultWorkingDirectory)'
 
   - task: Bash@3
     displayName: 'filter and export polygons'
