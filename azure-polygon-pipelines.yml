@@ -34,13 +34,13 @@ jobs:
   strategy:
     matrix:
       #TODO: populate matrix config programatically
-      obb:
-        OSM_REGION: 'oberbayern'
-        PBF_URL: 'http://download.geofabrik.de/europe/germany/bayern/oberbayern-latest.osm.pbf'
-      de:
-        OSM_REGION: 'germany'
-        PBF_URL: 'https://download.geofabrik.de/europe/germany-latest.osm.pbf'
-  
+      algeria:
+        OSM_REGION: 'algeria'
+        PBF_URL: 'https://download.geofabrik.de/africa/algeria-latest.osm.pbf'
+      angola:
+        OSM_REGION: 'angola'
+        PBF_URL: 'https://download.geofabrik.de/africa/angola-latest.osm.pbf'
+        
   steps:
   - script: |
       set -x
@@ -84,9 +84,18 @@ jobs:
         osmium tags-filter --output ${ADMIN_PBF} --overwrite ${INPUT_PBF} boundary=administrative
         osmium export ${ADMIN_PBF} --output=${POLYGON_JSON} --omit-rs --overwrite #--geometry-types=polygon
 
+  # TODO: remove deprecated job
   - task: PublishBuildArtifacts@1
-    enabled: true
+    enabled: false
     inputs:
       PathtoPublish: '$(OSM_REGION).admin-polygons.geojsonseq'
       ArtifactName: 'polygons'
       publishLocation: 'Container'
+
+  - task: PublishPipelineArtifact@1
+    enabled: true
+    displayName: 'Store polygon artifacts'
+    inputs:
+      targetPath: '$(OSM_REGION).admin-polygons.geojsonseq'
+      artifact: 'admin-polygons-$(OSM_REGION)'
+      publishLocation: 'pipeline'
