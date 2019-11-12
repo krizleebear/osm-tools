@@ -509,7 +509,10 @@ jobs:
         POLYGON_JSON=$(OSM_REGION).admin-polygons.geojsonseq
 
         osmium tags-filter --output ${ADMIN_PBF} --overwrite ${INPUT_PBF} boundary=administrative
-        osmium export ${ADMIN_PBF} --output=${POLYGON_JSON} --omit-rs --overwrite #--geometry-types=polygon
+        osmium export ${ADMIN_PBF} --output=temp.geojsonseq --omit-rs --overwrite #--geometry-types=polygon
+
+        #omit polygons without name, admin_level and wikidata reference
+        cat temp.geojsonseq | grep "admin_level" | grep "name" | grep "wikidata" > ${POLYGON_JSON}
 
   - task: PublishPipelineArtifact@1
     enabled: true
