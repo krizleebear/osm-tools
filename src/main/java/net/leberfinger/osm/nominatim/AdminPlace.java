@@ -183,7 +183,7 @@ public class AdminPlace {
 		}
 	}
 
-	private void addIfMissing(JsonObject properties, String key, JsonElement value) {
+	public static void addIfMissing(JsonObject properties, String key, JsonElement value) {
 		if (!properties.has(key) && value != null) {
 			if (!value.isJsonNull() && !value.getAsString().isEmpty()) {
 				properties.add(key, value);

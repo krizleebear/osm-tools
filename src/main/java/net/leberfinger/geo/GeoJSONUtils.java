@@ -65,4 +65,29 @@ public class GeoJSONUtils {
 		return props.getAsJsonObject();
 	}
 
+	public static String getType(JsonObject json)
+	{
+		return json.get("type").getAsString();
+	}
+	
+	public static boolean isFeature(JsonObject json) {
+		return "Feature".equals(getType(json));
+	}
+
+	public static boolean isFeatureCollection(JsonObject json) {
+		return "FeatureCollection".equals(getType(json));
+	}
+
+	public static JsonObject getFirstFeature(JsonObject json) {
+		JsonArray features = json.get("features").getAsJsonArray();
+		return features.get(0).getAsJsonObject();
+	}
+	
+	public static void addAttributeIfMissing(JsonObject properties, String key, JsonElement value) {
+		if (!properties.has(key) && value != null) {
+			if (!value.isJsonNull() && !value.getAsString().isEmpty()) {
+				properties.add(key, value);
+			}
+		}
+	}
 }

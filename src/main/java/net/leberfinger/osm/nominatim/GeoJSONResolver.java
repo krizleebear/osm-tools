@@ -69,11 +69,7 @@ public class GeoJSONResolver {
 	 * @throws IOException
 	 */
 	public void resolveLinesInFile(Path inputFile) throws IOException {
-		String origFilename = inputFile.getFileName().toString();
-		origFilename = FilenameUtils.removeExtension(origFilename);
-		String destFilename = origFilename + ".resolved.geojson";
-		
-		try (Writer resolvedWriter = Files.newBufferedWriter(Paths.get(destFilename));
+		try (Writer resolvedWriter = Files.newBufferedWriter(getDestFile(inputFile));
 				Stream<String> lines = Files.lines(inputFile);) {
 			AtomicInteger ai = new AtomicInteger(0);
 			lines.forEach(line -> {
@@ -91,6 +87,13 @@ public class GeoJSONResolver {
 				}
 			});
 		}
+	}
+
+	private Path getDestFile(Path inputFile) {
+		String origFilename = inputFile.getFileName().toString();
+		origFilename = FilenameUtils.removeExtension(origFilename);
+		String destFilename = origFilename + ".resolved.geojson";
+		return Paths.get(destFilename);
 	}
 
 	public String getStatistics() {

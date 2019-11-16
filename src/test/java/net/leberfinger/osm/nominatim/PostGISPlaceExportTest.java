@@ -9,6 +9,7 @@ import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.util.List;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -18,7 +19,7 @@ class PostGISPlaceExportTest {
 	PostGISPlaceExport exporter = new PostGISPlaceExport();
 	
 	@Test
-	@DisabledOnOs(OS.LINUX)
+	@Disabled
 	void importFromDB() throws SQLException, IOException {
 		
 		List<AdminPlace> places = exporter.exportFromDB();
