@@ -1,5 +1,10 @@
 package net.leberfinger.geo;
 
+import java.util.Map;
+import java.util.Map.Entry;
+
+import org.eclipse.collections.impl.factory.Maps;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -89,5 +94,22 @@ public class GeoJSONUtils {
 				properties.add(key, value);
 			}
 		}
+	}
+
+	public static Map<String, JsonElement> getPropertiesAsMap(JsonObject geoJson) {
+		JsonObject properties = getProperties(geoJson);
+		
+		Map<String, JsonElement> map = Maps.mutable.empty();
+		for(Entry<String, JsonElement> entry : properties.entrySet())
+		{
+			map.put(entry.getKey(), entry.getValue());
+		}
+		
+		return map;
+	}
+
+	public static void addProperty(JsonObject dest, String key, String value) {
+		JsonObject properties = getProperties(dest);
+		properties.addProperty(key, value);
 	}
 }

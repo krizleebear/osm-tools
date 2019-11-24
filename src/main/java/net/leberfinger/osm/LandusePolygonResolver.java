@@ -62,7 +62,7 @@ public class LandusePolygonResolver {
 		System.out.println("2/3 importing and resolving places");
 		importPlaces();
 
-		System.out.println("3/3 writing resolved polygons");
+		System.out.println("3/3 writing resolved polygons to " + getDestFile(polygonJSON));
 		writeResolvedPolygons();
 	}
 
@@ -108,6 +108,9 @@ public class LandusePolygonResolver {
 
 		// add centre coordinate
 		polygonProperties.add("center", placeCoordinates);
+		
+		// add id of centre node
+		polygonProperties.add("centre_id", placeProperties.get("@id"));
 
 		// add admin_level
 		JsonElement defaultAdminLevel = new JsonPrimitive(9);
