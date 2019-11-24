@@ -22,20 +22,27 @@ public class AdminCentreExtractTest {
 	@Test
 	void test() throws IOException {
 		Path pbfFile = Paths.get("src/test/resources/testadmins.pbf");
-
-		try (AdminCentreExtract extractor = new AdminCentreExtract();) {
-			extractor.extract(pbfFile);
-		}
+		Path adminCentreFile = Paths.get("testadmins.admincentres.geojsonseq");
 		
-		Path adminCentreFile = Paths.get("admincentres.geojsonseq");
+		Files.deleteIfExists(adminCentreFile);
+
+		AdminCentreExtract.extract(pbfFile);
+		
 		assertThat(adminCentreFile.toFile()).exists();
 		List<String> adminCentreLines = Files.readAllLines(adminCentreFile);
 		assertThat(adminCentreLines).hasSize(2);
 		
 		JsonObject berlinCenter = GeoJSONUtils.fromString(adminCentreLines.get(0));
+		System.out.println(berlinCenter);
+		
 		Map<String, JsonElement> centerProps = GeoJSONUtils.getPropertiesAsMap(berlinCenter);
 		assertThat(centerProps).containsEntry("@id", new JsonPrimitive(62422));
 		assertThat(centerProps).containsEntry("admincentre_id", new JsonPrimitive(240109189));
+		assertThat(centerProps).containsEntry("name", new JsonPrimitive("Berlin"));
+		assertThat(centerProps).containsEntry("admin_level", new JsonPrimitive("4"));
+		
+		
+		Files.delete(adminCentreFile);
 	}
 
 }

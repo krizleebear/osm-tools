@@ -3,7 +3,6 @@ package net.leberfinger.osm;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
-import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -12,8 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVPrinter;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.openstreetmap.osmosis.core.container.v0_6.EntityContainer;
 import org.openstreetmap.osmosis.core.container.v0_6.RelationContainer;
@@ -40,14 +38,13 @@ public class AdminCentreExtract implements Sink {
 	private long entityCount = 0;
 	private long adminRelations = 0;
 	private long adminRelationsWithAdminCentre = 0;
-	
-	private  static final String[] TSV_HEADERS = new String[] { "admin_id", "admin_level", "admin_name",
-			"admincentre_type", "admincentre_id" };
-
-	private static final Path OUTPUT_TSV = Paths.get("admincentres.tsv");
-	private static final Path OUTPUT_JSON = Paths.get("admincentres.geojsonseq");
 
 	private PrintWriter writer = null;
+	private final Path inputPbfFile;
+
+	public AdminCentreExtract(Path inputPbfFile) {
+		this.inputPbfFile = inputPbfFile;
+	}
 
 	@Override
 	public void initialize(Map<String, Object> metaData) {
@@ -59,7 +56,14 @@ public class AdminCentreExtract implements Sink {
 	}
 
 	private PrintWriter newJsonPrinter() throws IOException {
-		return new PrintWriter(Files.newBufferedWriter(OUTPUT_JSON));
+		return new PrintWriter(Files.newBufferedWriter(getDestFile()));
+	}
+
+	private Path getDestFile() {
+		String origFilename = inputPbfFile.getFileName().toString();
+		origFilename = FilenameUtils.removeExtension(origFilename);
+		String destFilename = origFilename + ".admincentres.geojsonseq";
+		return Paths.get(destFilename);
 	}
 
 	@Override
@@ -70,11 +74,6 @@ public class AdminCentreExtract implements Sink {
 		if (writer != null) {
 			writer.flush();
 		}
-	}
-
-	private CSVPrinter newTSVPrinter() throws IOException {
-		Writer out = Files.newBufferedWriter(OUTPUT_TSV);
-		return new CSVPrinter(out, CSVFormat.TDF.withHeader(TSV_HEADERS));
 	}
 
 	@Override
@@ -196,14 +195,6 @@ public class AdminCentreExtract implements Sink {
 			this.adminCentreID = adminCentreID;
 		}
 
-		public void printTo(CSVPrinter printer) {
-			try {
-				printer.printRecord(adminID, adminLevel, adminName, adminCentreType, adminCentreID);
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			}
-		}
-
 		public void printToJSONStream(PrintWriter pw) {
 			pw.println(toJSON());
 		}
@@ -232,18 +223,31 @@ public class AdminCentreExtract implements Sink {
 			properties.addProperty("@type", "relation");
 			properties.addProperty("admincentre_type", adminCentreType);
 			properties.addProperty("admincentre_id", adminCentreID);
+			properties.addProperty("admin_level", adminLevel);
+			properties.addProperty("name", adminName);
 
 			return j.toString();
 		}
 	}
 
-	public void extract(Path pbfFile) throws IOException {
-		try (InputStream inputStream = Files.newInputStream(pbfFile)) {
-			AdminCentreExtract detector = new AdminCentreExtract();
-
+	public void extract() throws IOException {
+		try (InputStream inputStream = Files.newInputStream(inputPbfFile)) {
 			OsmosisReader reader = new OsmosisReader(inputStream);
-			reader.setSink(detector);
+			reader.setSink(this);
 			reader.run();
 		}
+	}
+	
+	public static void extract(Path pbfFile) throws IOException
+	{
+		try (AdminCentreExtract extractor = new AdminCentreExtract(pbfFile);) {
+			extractor.extract();
+		}
+	}
+	
+	public static void main(String[] args) throws IOException
+	{
+		Path p = Paths.get(args[0]);
+		extract(p);
 	}
 }
