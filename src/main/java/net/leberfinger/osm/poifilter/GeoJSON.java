@@ -34,11 +34,12 @@ public class GeoJSON {
 		gson = gsonBuilder.create();
 	}
 	
-	public Feature fromString(String jsonString)
+	public static Feature fromString(String jsonString)
 	{
+		Gson gson = new Gson();
 		return gson.fromJson(jsonString, Feature.class);
 	}
-
+	
 	public String toGeoJSON(Node poi) {
 
 		Point point = Point.from(poi.getLongitude(), poi.getLatitude());

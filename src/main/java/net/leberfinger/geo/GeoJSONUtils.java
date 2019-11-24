@@ -8,6 +8,7 @@ import org.eclipse.collections.impl.factory.Maps;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 public class GeoJSONUtils {
 
@@ -111,5 +112,12 @@ public class GeoJSONUtils {
 	public static void addProperty(JsonObject dest, String key, String value) {
 		JsonObject properties = getProperties(dest);
 		properties.addProperty(key, value);
+	}
+	
+	public static JsonObject fromString(String jsonString)
+	{
+		JsonParser parser = new JsonParser();
+		JsonObject json = parser.parse(jsonString).getAsJsonObject();
+		return json;
 	}
 }
