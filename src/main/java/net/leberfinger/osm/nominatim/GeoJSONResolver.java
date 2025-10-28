@@ -46,9 +46,8 @@ public class GeoJSONResolver {
 
 		Optional<AdminPlace> resolvedPlace = resolver.resolve(lat, lon);
 		
-		JsonObject properties = GeoJSONUtils.getProperties(json);
-
 		if (resolvedPlace.isPresent()) {
+			JsonObject properties = GeoJSONUtils.getProperties(json);
 			resolvedPlace.get().addMissingAddressProperties(properties);
 		}
 		else

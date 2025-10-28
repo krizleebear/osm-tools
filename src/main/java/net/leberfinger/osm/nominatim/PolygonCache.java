@@ -11,7 +11,9 @@ import java.util.List;
 import java.util.Optional;
 
 import org.eclipse.collections.api.list.MutableList;
+import org.eclipse.collections.api.map.primitive.MutableIntIntMap;
 import org.eclipse.collections.impl.factory.Lists;
+import org.eclipse.collections.impl.factory.primitive.IntIntMaps;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
@@ -42,6 +44,7 @@ public class PolygonCache implements IAdminResolver {
 	private final STRtree index = new STRtree();
 	private final GeometryFactory geoFactory = new GeometryFactory();
 	private final PreparedGeometryFactory preparedGeoFactory = new PreparedGeometryFactory();
+	private final MutableIntIntMap adminLevelCounter = IntIntMaps.mutable.empty();
 
 	private final WKTReader wktReader = new WKTReader(geoFactory);
 
@@ -148,6 +151,8 @@ public class PolygonCache implements IAdminResolver {
 		final Geometry geometry = place.getGeometry();
 		Envelope envelope = geometry.getEnvelopeInternal();
 
+		adminLevelCounter.addToValue(place.getAdminLevel(), 1);
+		
 		index.insert(envelope, place);
 	}
 
@@ -195,7 +200,7 @@ public class PolygonCache implements IAdminResolver {
 
 	@Override
 	public String getStatistics() {
-		return "Index size: " + index.size();
+		return "Index size: " + index.size() + " Admin Levels: " + adminLevelCounter.toString();
 	}
 
 	public int size() {
