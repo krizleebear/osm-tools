@@ -183,12 +183,22 @@ public class AdminPlace {
 		}
 	}
 
+	
+	
+	// properties are the values from the place to resolve
+	// key is e.g. "addr:state"
+	// value refers to the value of the AdminPlace, e.g. a state name
 	public static void addIfMissing(JsonObject properties, String key, JsonElement value) {
-		if (!properties.has(key) && value != null) {
-			if (!value.isJsonNull() && !value.getAsString().isEmpty()) {
+		if(isMissing(properties, key))
+		{
+			if (value != null && !value.isJsonNull() && !value.getAsString().isEmpty()) {
 				properties.add(key, value);
 			}
 		}
+	}
+
+	private static boolean isMissing(JsonObject properties, String key) {
+		return !properties.has(key) || properties.get(key).isJsonNull() || properties.get(key).getAsString().isEmpty();
 	}
 
 	public boolean covers(Point point) {
