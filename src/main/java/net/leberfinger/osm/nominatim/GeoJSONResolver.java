@@ -1,7 +1,9 @@
 package net.leberfinger.osm.nominatim;
 
 import java.io.IOException;
+import java.io.Reader;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -123,8 +125,52 @@ public class GeoJSONResolver {
 		Path polygonFile = Paths.get(options.valueOf("poly-file").toString());
 		Path inputFile = Paths.get(options.valueOf("input-file").toString());
 
-		PolygonCache polygons = PolygonCache.fromGeoJSONStream(polygonFile);
+		final PolygonCache polygons = new PolygonCache();
+		if(Files.isDirectory(polygonFile))
+		{
+			Files.list(polygonFile).forEach(singlePolygonFile -> {
+				System.out.println(singlePolygonFile);
+				cachePolygons(polygons, singlePolygonFile);
+			});
+		}
+		else
+		{
+			cachePolygons(polygons, polygonFile);
+		}
+		
 		GeoJSONResolver resolver = new GeoJSONResolver(polygons);
-		resolver.resolveLinesInFile(inputFile);
+		
+		if(Files.isDirectory(inputFile))
+		{
+			Files.list(inputFile).forEach(geojsonFile -> {
+				if(wasAlreadyProcessed(geojsonFile))
+				{
+					System.out.println(geojsonFile + " was already processed. Skipping.");
+					return;
+				}
+				try {
+					System.out.println(geojsonFile);
+					resolver.resolveLinesInFile(geojsonFile);
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+			});
+		}
+		else
+		{
+			resolver.resolveLinesInFile(inputFile);
+		}
+	}
+
+	protected static boolean wasAlreadyProcessed(Path geojsonFile) {
+		return geojsonFile.getFileName().toString().contains(".resolved.");
+	}
+
+	private static void cachePolygons(final PolygonCache polygons, Path singlePolygonFile) {
+		try (Reader r = Files.newBufferedReader(singlePolygonFile, StandardCharsets.UTF_8)) {
+			polygons.importGeoJSONStream(r);
+		} catch (IOException | ParseException e) {
+			throw new RuntimeException(e);
+		}
 	}
 }

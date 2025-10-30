@@ -139,6 +139,9 @@ public class AdminPlace {
 		case 2: {
 			return "addr:country";
 		}
+		case 3: {
+			return "addr:adminlvl_3";
+		}
 		case 4: {
 			return "addr:state";
 		}

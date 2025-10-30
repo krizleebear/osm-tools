@@ -92,9 +92,16 @@ public class PolygonCache implements IAdminResolver {
 				
 				if(properties.has("admin_level"))
 				{
-					int adminLevel = properties.get("admin_level").getAsInt();
-					String addressKey = AdminPlace.getAddressElementForAdminLevel(adminLevel);
-					addressProperties.add(addressKey, properties.get("name"));
+					try
+					{
+						int adminLevel = properties.get("admin_level").getAsInt();
+						String addressKey = AdminPlace.getAddressElementForAdminLevel(adminLevel);
+						addressProperties.add(addressKey, properties.get("name"));	
+					}
+					catch (Exception e)
+					{
+						continue;
+					}
 				}
 				else
 				{
