@@ -143,6 +143,11 @@ public class GeoJSONResolver {
 		if(Files.isDirectory(inputFile))
 		{
 			Files.list(inputFile).forEach(geojsonFile -> {
+				if(wasAlreadyProcessed(geojsonFile))
+				{
+					System.out.println(geojsonFile + " was already processed. Skipping.");
+					return;
+				}
 				try {
 					System.out.println(geojsonFile);
 					resolver.resolveLinesInFile(geojsonFile);
@@ -155,6 +160,10 @@ public class GeoJSONResolver {
 		{
 			resolver.resolveLinesInFile(inputFile);
 		}
+	}
+
+	protected static boolean wasAlreadyProcessed(Path geojsonFile) {
+		return geojsonFile.getFileName().toString().contains(".resolved.");
 	}
 
 	private static void cachePolygons(final PolygonCache polygons, Path singlePolygonFile) {

@@ -96,4 +96,10 @@ class GeoJSONResolverTest {
 		return PolygonCache.fromGeoJSONStream(Paths.get("polygons.geojsonseq"));	
 	}
 
+	@Test
+	void ignoreAlreadyProcessedFiles()
+	{
+		assertFalse(GeoJSONResolver.wasAlreadyProcessed(Paths.get("test.geojson")));
+		assertTrue(GeoJSONResolver.wasAlreadyProcessed(Paths.get("test.resolved.geojson")));
+	}
 }
