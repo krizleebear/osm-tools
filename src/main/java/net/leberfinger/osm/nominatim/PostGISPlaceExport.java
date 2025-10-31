@@ -77,22 +77,23 @@ public class PostGISPlaceExport {
 					JsonObject jsonPlace = new JsonObject();
 					// PGgeometry geomContainer = r.getObject(3, PGgeometry.class);
 
-					final int adminLevel = r.getInt(5);
-					jsonPlace.addProperty("admin_level", adminLevel);
+					final int adminLevelInt = r.getInt(5);
+					jsonPlace.addProperty("admin_level", adminLevelInt);
 					jsonPlace.addProperty("place_id", r.getLong(1));
 					jsonPlace.addProperty("osm_type", r.getString(4));
 
 					JsonObject addressProperties = new JsonObject();
 					jsonPlace.add("address", addressProperties);
 
+					AdminLevel adminLevel = AdminLevel.fromOsmAdminLevel(adminLevelInt);
 					String nameHStore = r.getString(2);
 					if (nameHStore == null) {
 						// skip polygons without names
 						continue;
 					} else {
 						Map<String, String> names = HStoreConverter.fromString(nameHStore);
-
-						String addressKey = AdminPlace.getAddressElementForAdminLevel(adminLevel);
+						
+						String addressKey = adminLevel.getAddressElement();
 						addressProperties.addProperty(addressKey, names.get("name"));
 
 						names.forEach((lang, translation) -> {
@@ -103,7 +104,8 @@ public class PostGISPlaceExport {
 					String geotext = r.getString(3);
 					
 					PreparedGeometry geometry = createGeoFromText(geotext);
-					AdminPlace adminPlace = new AdminPlace(geometry, jsonPlace);
+					
+					AdminPlace adminPlace = new AdminPlace(geometry, jsonPlace, adminLevel);
 
 					if (!isArea(geometry.getGeometry())) {
 						continue;

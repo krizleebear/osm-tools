@@ -97,7 +97,7 @@ public class NominatimConnection implements IAdminResolver {
 			
 			PreparedGeometry optimizedGeometry = createGeoFromText(geotext);
 
-			AdminPlace place = new AdminPlace(optimizedGeometry, json);
+			AdminPlace place = new AdminPlace(optimizedGeometry, json, AdminLevel.UNKNOWN);
 
 			// remove JSON version of polygon to reduce memory footprint
 			json.remove("geotext");

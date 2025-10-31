@@ -90,31 +90,37 @@ public class PolygonCache implements IAdminResolver {
 				JsonObject addressProperties = new JsonObject();
 				properties.add("address", addressProperties);
 				
-				if(properties.has("admin_level"))
+				AdminLevel adminLevel = null;
+				if(properties.has("admin_level")) // numeric AdminLevel, like OSM
 				{
 					try
 					{
-						int adminLevel = properties.get("admin_level").getAsInt();
-						String addressKey = AdminPlace.getAddressElementForAdminLevel(adminLevel);
-						addressProperties.add(addressKey, properties.get("name"));	
+						int osmAdminLevel = properties.get("admin_level").getAsInt();
+						adminLevel = AdminLevel.fromOsmAdminLevel(osmAdminLevel);
 					}
 					catch (Exception e)
 					{
 						continue;
 					}
 				}
+				else if(properties.has("subtype")) // like in overture maps
+				{
+					String subType = properties.get("subtype").getAsString();
+					adminLevel = AdminLevel.fromOvertureSubtype(subType);
+				}
 				else
 				{
 					//TODO: ignore the whole polygon for now
 					continue;
 				}
-				 
+				
+				addressProperties.add(adminLevel.getAddressElement(), properties.get("name"));	
 				String geometryJSON = json.remove("geometry").toString();
 
 				Geometry geometry = geoReader.read(geometryJSON);
 				PreparedGeometry optimizedGeometry = preparedGeoFactory.create(geometry);
 
-				AdminPlace adminPlace = new AdminPlace(optimizedGeometry, properties);
+				AdminPlace adminPlace = new AdminPlace(optimizedGeometry, properties, adminLevel);
 
 				addToIndex(adminPlace);
 			}
@@ -139,7 +145,7 @@ public class PolygonCache implements IAdminResolver {
 				String wellKnownText = json.remove("wktGeometry").getAsString();
 
 				PreparedGeometry geometry = createGeoFromText(wellKnownText);
-				AdminPlace adminPlace = new AdminPlace(geometry, json);
+				AdminPlace adminPlace = new AdminPlace(geometry, json, AdminLevel.UNKNOWN);
 				
 				addToIndex(adminPlace);
 			}
@@ -158,7 +164,7 @@ public class PolygonCache implements IAdminResolver {
 		final Geometry geometry = place.getGeometry();
 		Envelope envelope = geometry.getEnvelopeInternal();
 
-		adminLevelCounter.addToValue(place.getAdminLevel(), 1);
+		adminLevelCounter.addToValue(place.getAdminLevel().getOsmAdminLevel(), 1);
 		
 		index.insert(envelope, place);
 	}
@@ -182,7 +188,7 @@ public class PolygonCache implements IAdminResolver {
 
 		// order places by admin_level to return most detailled information and not
 		// only "Germany" or such
-		coveringPlaces.sortThisByInt(place -> place.getAdminLevel());
+		coveringPlaces.sortThisByInt(place -> place.getAdminLevel().getOsmAdminLevel());
 
 		// TODO: resolve hierarchy to top
 		resolveHierarchy(coveringPlaces);
