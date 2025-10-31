@@ -14,10 +14,18 @@ public class AdminPlace {
 	private final PreparedGeometry geometry;
 	private final JsonObject json;
 	private final long placeID;
+	private final AdminLevel adminLevel;
 
-	public AdminPlace(PreparedGeometry geometry, JsonObject json) {
+	private static final boolean OVERWRITE_ADDRESS_ATTRIBUTES;
+	
+	static {
+		OVERWRITE_ADDRESS_ATTRIBUTES = "true".equalsIgnoreCase(System.getProperty("OVERWRITE_ADDRESS_ATTRIBUTES", "false"));
+	}
+	
+	public AdminPlace(PreparedGeometry geometry, JsonObject json, AdminLevel adminLevel) {
 		this.geometry = geometry;
 		this.json = json;
+		this.adminLevel = adminLevel;
 		placeID = this.json.get("place_id").getAsLong();
 	}
 
@@ -76,9 +84,10 @@ public class AdminPlace {
 		return json.get("place_rank").getAsInt();
 	}
 	
-	public int getAdminLevel()
+	public AdminLevel getAdminLevel()
 	{
-		return json.get("admin_level").getAsInt();
+		return this.adminLevel;
+		//return json.get("admin_level").getAsInt();
 	}
 	
 	/**
@@ -127,72 +136,11 @@ public class AdminPlace {
 		addIfMissing(properties, "addr:city", nominatimAddress.get("addr:county"));
 	}
 	
-	/**
-	 * TODO: make country dependant, see
-	 * https://wiki.openstreetmap.org/wiki/Tag:boundary%3Dadministrative#10_admin_level_values_for_specific_countries
-	 * 
-	 * @param adminLevel
-	 * @return
-	 */
-	public static String getAddressElementForAdminLevel(int adminLevel) {
-		switch (adminLevel) {
-		case 2: {
-			return "addr:country";
-		}
-		case 3: {
-			return "addr:adminlvl_3";
-		}
-		case 4: {
-			return "addr:state";
-		}
-		case 5: {
-			return "addr:state_district";
-		}
-		case 6: {
-			return "addr:county";
-		}
-		case 7: {
-			return "addr:amt";
-		}
-		case 8: {
-			return "addr:city";
-		}
-		case 9: {
-			return "addr:city_district";
-		}
-		case 10: {
-			return "addr:city_district";
-		}
-		case 11: {
-			return "addr:city_district_11";
-		}
-		case 12: {
-			return "addr:city_district_12";
-		}
-		case 13: {
-			return "addr:city_district_13";
-		}
-		case 14: {
-			return "addr:city_district_14";
-		}
-		case 15: {
-			return "addr:city_district_15";
-		}
-		case 16: {
-			return "addr:city_district_16";
-		}
-		default: 
-			throw new RuntimeException("Unknown admin level " + adminLevel);
-		}
-	}
-
-	
-	
 	// properties are the values from the place to resolve
 	// key is e.g. "addr:state"
 	// value refers to the value of the AdminPlace, e.g. a state name
 	public static void addIfMissing(JsonObject properties, String key, JsonElement value) {
-		if(isMissing(properties, key))
+		if(isMissing(properties, key) || OVERWRITE_ADDRESS_ATTRIBUTES)
 		{
 			if (value != null && !value.isJsonNull() && !value.getAsString().isEmpty()) {
 				properties.add(key, value);
