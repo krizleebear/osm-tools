@@ -11,7 +11,7 @@ RUN --mount=type=cache,target=/root/.m2 mvn dependency:go-offline -B
 COPY src ./src
 RUN --mount=type=cache,target=/root/.m2 mvn -DskipTests package
 
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre
 WORKDIR /app
 ENV JAVA_OPTS=""
 
