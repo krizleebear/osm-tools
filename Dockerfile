@@ -5,11 +5,11 @@ WORKDIR /workspace
 COPY pom.xml .
 
 # Download dependencies (this layer will be cached if pom.xml doesn't change)
-RUN mvn dependency:go-offline -B
+RUN --mount=type=cache,target=/root/.m2 mvn dependency:go-offline -B
 
 # copy source and build
 COPY src ./src
-RUN mvn -DskipTests package
+RUN --mount=type=cache,target=/root/.m2 mvn -DskipTests package
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
