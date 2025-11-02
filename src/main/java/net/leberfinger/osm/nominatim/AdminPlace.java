@@ -134,7 +134,18 @@ public class AdminPlace {
 		// if city is still not set, but county is set, assume a district-city
 		// (e.g. Kreisfreie Stadt in Germany)
 		addIfMissing(properties, "addr:city", nominatimAddress.get("addr:county"));
+
+        // add division id with proper admin info
+        getDivisionID().ifPresent(divisionID -> {
+            addIfMissing(properties, "divisionID", divisionID);
+        });
 	}
+
+    public Optional<JsonElement> getDivisionID()
+    {
+        JsonElement divisionId = json.get("division_id");
+        return Optional.ofNullable(divisionId);
+    }
 	
 	// properties are the values from the place to resolve
 	// key is e.g. "addr:state"

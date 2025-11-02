@@ -186,11 +186,15 @@ public class PolygonCache implements IAdminResolver {
 			}
 		}
 
-		// order places by admin_level to return most detailled information and not
-		// only "Germany" or such
+		// order places by admin_level to return most detailed information and not
+		// only "country=Germany" or such
 		coveringPlaces.sortThisByInt(place -> place.getAdminLevel().getOsmAdminLevel());
 
-		// TODO: resolve hierarchy to top
+        // at the borders of polygons, conflicting results could appear
+        // e.g. a mountain top being assign to both Germany and Austria
+        // potentially we should support this behavior
+
+		// resolve hierarchy to top
 		resolveHierarchy(coveringPlaces);
 
 		return coveringPlaces.reverseThis().getFirstOptional();

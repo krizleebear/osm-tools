@@ -2,11 +2,14 @@ package net.leberfinger.osm.nominatim;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.io.UncheckedIOException;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
@@ -71,24 +74,41 @@ public class GeoJSONResolver {
 	 */
 	public void resolveLinesInFile(Path inputFile) throws IOException {
 		try (Writer resolvedWriter = Files.newBufferedWriter(getDestFile(inputFile));
-				Stream<String> lines = Files.lines(inputFile);) {
-			AtomicInteger ai = new AtomicInteger(0);
+				Stream<String> lines = Files.lines(inputFile)) {
+            final Instant startTime = Instant.now();
+			AtomicInteger counter = new AtomicInteger(0);
+            AtomicInteger errorCounter = new AtomicInteger(0);
 			lines.forEach(line -> {
 				try {
 					JsonObject resolved = addAddress(line);
 					resolvedWriter.write(resolved.toString());
 					resolvedWriter.write("\n");
 
-					int i = ai.incrementAndGet();
-					if (i % 1000 == 0) {
-						System.out.println(i);
+                    if (resolved.has("error")) {
+                        errorCounter.incrementAndGet();
+                    }
+
+					int i = counter.incrementAndGet();
+					if (i % 100_000 == 0) {
+						System.out.print(".");
 					}
 				} catch (IOException e) {
-					e.printStackTrace();
+					throw new UncheckedIOException(e);
 				}
 			});
+            printStatistic(inputFile, counter, errorCounter, startTime);
 		}
 	}
+
+    private void printStatistic(Path inputFile, AtomicInteger counter, AtomicInteger errorCounter, Instant startTime) {
+        Duration duration = Duration.between(startTime, Instant.now());
+        double errorPercent = errorCounter.get() * 100.0 / counter.get();
+        String log = String.format(" %s: Resolved %,d places in %d seconds. Unresolved: %,d (%.0f %%)",
+                inputFile.getFileName().toString(),
+                counter.get(), duration.getSeconds(), errorCounter.get(), errorPercent);
+
+        System.out.println(log);
+    }
 
 	private Path getDestFile(Path inputFile) {
 		String origFilename = inputFile.getFileName().toString();
@@ -169,6 +189,7 @@ public class GeoJSONResolver {
 	private static void cachePolygons(final PolygonCache polygons, Path singlePolygonFile) {
 		try (Reader r = Files.newBufferedReader(singlePolygonFile, StandardCharsets.UTF_8)) {
 			polygons.importGeoJSONStream(r);
+            System.out.println(polygons.getStatistics());
 		} catch (IOException | ParseException e) {
 			throw new RuntimeException(e);
 		}
