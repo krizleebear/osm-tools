@@ -148,10 +148,12 @@ public class GeoJSONResolver {
 		final PolygonCache polygons = new PolygonCache();
 		if(Files.isDirectory(polygonFile))
 		{
-			Files.list(polygonFile).forEach(singlePolygonFile -> {
-				System.out.println(singlePolygonFile);
-				cachePolygons(polygons, singlePolygonFile);
-			});
+            try (Stream<Path> polyFiles = Files.list(polygonFile)) {
+                polyFiles.forEach(singlePolygonFile -> {
+                    System.out.println(singlePolygonFile);
+                    cachePolygons(polygons, singlePolygonFile);
+                });
+            }
 		}
 		else
 		{
@@ -162,19 +164,20 @@ public class GeoJSONResolver {
 		
 		if(Files.isDirectory(inputFile))
 		{
-			Files.list(inputFile).forEach(geojsonFile -> {
-				if(wasAlreadyProcessed(geojsonFile))
-				{
-					System.out.println(geojsonFile + " was already processed. Skipping.");
-					return;
-				}
-				try {
-					System.out.println(geojsonFile);
-					resolver.resolveLinesInFile(geojsonFile);
-				} catch (IOException e) {
-					throw new RuntimeException(e);
-				}
-			});
+            try (Stream<Path> inputFiles = Files.list(inputFile)) {
+                inputFiles.forEach(geojsonFile -> {
+                    if (wasAlreadyProcessed(geojsonFile)) {
+                        System.out.println(geojsonFile + " was already processed. Skipping.");
+                        return;
+                    }
+                    try {
+                        System.out.println(geojsonFile);
+                        resolver.resolveLinesInFile(geojsonFile);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+            }
 		}
 		else
 		{
