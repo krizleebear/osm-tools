@@ -16,12 +16,6 @@ public class AdminPlace {
 	private final long placeID;
 	private final AdminLevel adminLevel;
 
-	private static final boolean OVERWRITE_ADDRESS_ATTRIBUTES;
-	
-	static {
-		OVERWRITE_ADDRESS_ATTRIBUTES = "true".equalsIgnoreCase(System.getProperty("OVERWRITE_ADDRESS_ATTRIBUTES", "false"));
-	}
-	
 	public AdminPlace(PreparedGeometry geometry, JsonObject json, AdminLevel adminLevel) {
 		this.geometry = geometry;
 		this.json = json;
@@ -151,7 +145,7 @@ public class AdminPlace {
 	// key is e.g. "addr:state"
 	// value refers to the value of the AdminPlace, e.g. a state name
 	public static void addIfMissing(JsonObject properties, String key, JsonElement value) {
-		if(isMissing(properties, key) || OVERWRITE_ADDRESS_ATTRIBUTES)
+		if(isMissing(properties, key))
 		{
 			if (value != null && !value.isJsonNull() && !value.getAsString().isEmpty()) {
 				properties.add(key, value);
