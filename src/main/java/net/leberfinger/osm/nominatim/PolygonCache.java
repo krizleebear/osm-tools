@@ -106,6 +106,7 @@ public class PolygonCache implements IAdminResolver {
 				else if(properties.has("subtype")) // like in overture maps
 				{
 					String subType = properties.get("subtype").getAsString();
+					//String class = properties.get
 					adminLevel = AdminLevel.fromOvertureSubtype(subType);
 				}
 				else
@@ -186,7 +187,7 @@ public class PolygonCache implements IAdminResolver {
 			}
 		}
 
-		// order places by admin_level to return most detailled information and not
+		// order places by admin_level to return most detailed information and not
 		// only "Germany" or such
 		coveringPlaces.sortThisByInt(place -> place.getAdminLevel().getOsmAdminLevel());
 
