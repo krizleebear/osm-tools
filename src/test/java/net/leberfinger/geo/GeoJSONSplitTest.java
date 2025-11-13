@@ -1,7 +1,7 @@
 package net.leberfinger.geo;
 
 import org.eclipse.collections.api.list.ImmutableList;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;

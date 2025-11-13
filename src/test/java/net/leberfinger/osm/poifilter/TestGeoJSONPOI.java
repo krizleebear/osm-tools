@@ -1,10 +1,5 @@
 package net.leberfinger.osm.poifilter;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
 import java.sql.Date;
 import java.util.Collection;
 import java.util.List;
@@ -28,14 +23,15 @@ import com.google.common.collect.ImmutableMap;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
+import org.openstreetmap.osmosis.core.domain.v0_6.*;
 
-import net.leberfinger.osm.poifilter.GeoJSON;
+import static org.junit.jupiter.api.Assertions.*;
 
 class TestGeoJSONPOI {
 
-	private Gson gson = new GsonBuilder().registerTypeAdapterFactory(new GeometryAdapterFactory()).create();
+	private final Gson gson = new GsonBuilder().registerTypeAdapterFactory(new GeometryAdapterFactory()).create();
 
-	private GeoJSON geoJSON = new GeoJSON();
+	private final GeoJSON geoJSON = new GeoJSON();
 
 	@Test
 	void testOSMNodeToGeoJSON() {
