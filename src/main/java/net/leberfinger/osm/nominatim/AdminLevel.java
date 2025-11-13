@@ -72,7 +72,9 @@ public enum AdminLevel {
         case "macrohood":
             return CITY_DISTRICT;
         case "neighborhood":
-            return CITY_DISTRICT;
+            return CITY_DISTRICT_10;
+        case "microhood":
+            return CITY_DISTRICT_11;
         default:
             throw new RuntimeException("Unknown Overture subtype " + subtype);
         }

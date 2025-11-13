@@ -1,9 +1,5 @@
 package net.leberfinger.osm.nominatim;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
@@ -17,6 +13,8 @@ import org.locationtech.jts.io.ParseException;
 
 import com.google.common.base.Stopwatch;
 import com.google.gson.JsonObject;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class GeoJSONResolverTest {
 
@@ -50,20 +48,7 @@ class GeoJSONResolverTest {
 		assertTrue(properties.has("addr:city"));
 		assertEquals("Palling", properties.get("addr:city").getAsString());
 	}
-	
-	@Test
-	void overwriteAttributesIfEnabled() throws IOException, ParseException
-	{
-		String json = "{\"type\": \"Feature\", \"properties\": {\"addr:city\": \"wrongCity\", \"id\": \"31d5e1eb-d10c-4616-acf0-47e34187e1c6\", \"type\": \"node\", \"lat\": 41.31325531, \"lon\": 19.44623566, \"addr:postcode\": \"1011\", \"addr:country\": \"AL\", \"addr:state\": \"\", \"addr:street\": \"2005 Plazh Lagjia 13, rruga Prometeu, Plepa, Durres\", \"name\": \"Sol Tropikal Durres\", \"confidence\": 0.77, \"website\": \"\", \"categories\": {\"primary\": \"resort\", \"alternate\": [\"hotel\", \"lodge\"]}, \"brand\": null, \"sources\": [{\"property\": \"\", \"dataset\": \"Microsoft\", \"license\": \"CDLA-Permissive-2.0\", \"record_id\": \"2251799821412020\", \"update_time\": \"2025-07-22T09:39:24.200Z\", \"confidence\": 0.77, \"between\": null}, {\"property\": \"/properties/confidence\", \"dataset\": \"Overture\", \"license\": \"CDLA-Permissive-2.0\", \"record_id\": null, \"update_time\": \"2025-10-15T20:07:19Z\", \"confidence\": null, \"between\": null}], \"names\": {\"primary\": \"Sol Tropikal Durres\", \"common\": null, \"rules\": null}, \"adminxml:POI_TYPE\": 43}, \"geometry\": {\"type\": \"Point\", \"coordinates\": [12.6378228, 48.0009058]}}";
 
-		System.setProperty("OVERWRITE_ADDRESS_ATTRIBUTES", "true");
-		
-		GeoJSONResolver resolver = new GeoJSONResolver(getExampleResolver());
-		JsonObject resolved = resolver.addAddress(json);
-		JsonObject properties = resolved.get("properties").getAsJsonObject();
-		assertEquals("Palling", properties.get("addr:city").getAsString());
-	}
-	
 	@Test
 	void resolveFile() throws IOException, ParseException
 	{

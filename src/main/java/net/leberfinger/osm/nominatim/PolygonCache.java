@@ -3,7 +3,6 @@ package net.leberfinger.osm.nominatim;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
-import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -75,13 +74,19 @@ public class PolygonCache implements IAdminResolver {
 	 */
 	public void importGeoJSONStream(Reader r) throws IOException, ParseException {
 		GeoJsonReader geoReader = new GeoJsonReader(geoFactory);
+        JsonParser parser = new JsonParser();
 
-		try (BufferedReader br = new BufferedReader(r)) {
-			JsonParser parser = new JsonParser();
+        try (BufferedReader br = new BufferedReader(r)) {
 			String line = null;
 
 			int i = 0;
 			while ((line = br.readLine()) != null) {
+
+                if(i % 10_000 == 0)
+                {
+                    System.out.print(".");
+                }
+
 				JsonObject json = parser.parse(line).getAsJsonObject();
 
 				JsonObject properties = json.get("properties").getAsJsonObject();
@@ -129,8 +134,7 @@ public class PolygonCache implements IAdminResolver {
 	}
 	
 	/**
-	 * Fill the cache with the objects provided by the given Reader. This is the
-	 * reverse operation of {@link #exportCache(Writer)}.
+	 * Fill the cache with the objects provided by the given Reader.
 	 * 
 	 * @param r
 	 * @throws IOException
@@ -188,10 +192,14 @@ public class PolygonCache implements IAdminResolver {
 		}
 
 		// order places by admin_level to return most detailed information and not
-		// only "Germany" or such
+		// only "country=Germany" or such
 		coveringPlaces.sortThisByInt(place -> place.getAdminLevel().getOsmAdminLevel());
 
-		// TODO: resolve hierarchy to top
+        // at the borders of polygons, conflicting results could appear
+        // e.g. a mountain top being assign to both Germany and Austria
+        // potentially we should support this behavior
+
+		// resolve hierarchy to top
 		resolveHierarchy(coveringPlaces);
 
 		return coveringPlaces.reverseThis().getFirstOptional();

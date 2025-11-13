@@ -5,13 +5,13 @@ WORKDIR /workspace
 COPY pom.xml .
 
 # Download dependencies (this layer will be cached if pom.xml doesn't change)
-RUN mvn dependency:go-offline -B
+RUN --mount=type=cache,target=/root/.m2 mvn dependency:go-offline -B
 
 # copy source and build
 COPY src ./src
-RUN mvn -DskipTests package
+RUN --mount=type=cache,target=/root/.m2 mvn -DskipTests package
 
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:25-jre
 WORKDIR /app
 ENV JAVA_OPTS=""
 
@@ -23,5 +23,10 @@ RUN groupadd -r osmtools && useradd -r -g osmtools osmtools
 RUN chown -R osmtools:osmtools /app
 USER osmtools
 
-EXPOSE 8080
-ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]
+COPY --chmod=755 <<EOT /entrypoint.sh
+#!/usr/bin/env bash
+set -exu
+java \$JAVA_OPTS -jar /app/app.jar \$@
+EOT
+
+ENTRYPOINT ["/entrypoint.sh"]

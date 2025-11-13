@@ -16,12 +16,6 @@ public class AdminPlace {
 	private final long placeID;
 	private final AdminLevel adminLevel;
 
-	private static final boolean OVERWRITE_ADDRESS_ATTRIBUTES;
-	
-	static {
-		OVERWRITE_ADDRESS_ATTRIBUTES = "true".equalsIgnoreCase(System.getProperty("OVERWRITE_ADDRESS_ATTRIBUTES", "false"));
-	}
-	
 	public AdminPlace(PreparedGeometry geometry, JsonObject json, AdminLevel adminLevel) {
 		this.geometry = geometry;
 		this.json = json;
@@ -134,13 +128,24 @@ public class AdminPlace {
 		// if city is still not set, but county is set, assume a district-city
 		// (e.g. Kreisfreie Stadt in Germany)
 		addIfMissing(properties, "addr:city", nominatimAddress.get("addr:county"));
+
+        // add division id with proper admin info
+        getDivisionID().ifPresent(divisionID -> {
+            addIfMissing(properties, "divisionID", divisionID);
+        });
 	}
+
+    public Optional<JsonElement> getDivisionID()
+    {
+        JsonElement divisionId = json.get("division_id");
+        return Optional.ofNullable(divisionId);
+    }
 	
 	// properties are the values from the place to resolve
 	// key is e.g. "addr:state"
 	// value refers to the value of the AdminPlace, e.g. a state name
 	public static void addIfMissing(JsonObject properties, String key, JsonElement value) {
-		if(isMissing(properties, key) || OVERWRITE_ADDRESS_ATTRIBUTES)
+		if(isMissing(properties, key))
 		{
 			if (value != null && !value.isJsonNull() && !value.getAsString().isEmpty()) {
 				properties.add(key, value);
