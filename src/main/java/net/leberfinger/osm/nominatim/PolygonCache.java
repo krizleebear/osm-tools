@@ -111,6 +111,7 @@ public class PolygonCache implements IAdminResolver {
 				else if(properties.has("subtype")) // like in overture maps
 				{
 					String subType = properties.get("subtype").getAsString();
+					//String class = properties.get
 					adminLevel = AdminLevel.fromOvertureSubtype(subType);
 				}
 				else
