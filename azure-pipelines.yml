@@ -53,3 +53,7 @@ steps:
     repository: 'krizleebear/osm-tools'
     command: 'buildAndPush'
     Dockerfile: '**/Dockerfile'
+    tags: |
+      $(Build.SourceBranchName)-$(Build.SourceVersion)
+      $(Build.SourceBranchName)-latest
+      latest
