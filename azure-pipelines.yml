@@ -8,13 +8,12 @@
 #- master
 
 trigger:
-  enabled: false
   batch: true
   branches:
     include:
     - master
     exclude:
-    - features/experimental/*
+    - '*'
   paths:
     exclude:
     - azure-pipelines-download-osm.yml
