@@ -222,7 +222,7 @@ public class PolygonCache implements IAdminResolver {
 
 	@Override
 	public String getStatistics() {
-		return "Index size: " + index.size() + " Admin Levels: " + adminLevelCounter.toString();
+		return "Admin Levels: " + adminLevelCounter.toString();
 	}
 
 	public int size() {
