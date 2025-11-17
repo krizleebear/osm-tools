@@ -54,6 +54,6 @@ steps:
     command: 'buildAndPush'
     Dockerfile: '**/Dockerfile'
     tags: |
-      $(Build.SourceBranch)-$(Build.SourceVersion)
-      $(Build.SourceBranch)-latest
+      $(Build.SourceBranchName)-$(Build.SourceVersion)
+      $(Build.SourceBranchName)-latest
       latest
