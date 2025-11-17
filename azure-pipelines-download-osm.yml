@@ -2,6 +2,9 @@
 
 name: osm-download
 
+# no PR triggers
+pr: none
+
 variables:
   imageName: 'polygon-export-docker'
 
