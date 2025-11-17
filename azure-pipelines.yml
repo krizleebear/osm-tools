@@ -30,26 +30,26 @@ steps:
     echo Add other tasks to build, test, and deploy your project.
     echo See https://aka.ms/yaml
   displayName: 'Run a multi-line script'
-- task: Maven@4
-  inputs:
-    mavenPomFile: 'pom.xml'
-    publishJUnitResults: true
-    testResultsFiles: '**/surefire-reports/TEST-*.xml'
-    javaHomeOption: 'JDKVersion'
-    mavenVersionOption: 'Default'
-    mavenAuthenticateFeed: false
-    effectivePomSkip: false
-    sonarQubeRunAnalysis: false
+#- task: Maven@4
+#  inputs:
+#    mavenPomFile: 'pom.xml'
+#    publishJUnitResults: true
+#    testResultsFiles: '**/surefire-reports/TEST-*.xml'
+#    javaHomeOption: 'JDKVersion'
+#    mavenVersionOption: 'Default'
+#    mavenAuthenticateFeed: false
+#    effectivePomSkip: false
+#   sonarQubeRunAnalysis: false
 
-- task: PublishPipelineArtifact@1
-  inputs:
-    targetPath: '$(Build.SourcesDirectory)/target'
-    artifact: 'osm-tools-jars'
-    publishLocation: 'pipeline'
+#- task: PublishPipelineArtifact@1
+#  inputs:
+#    targetPath: '$(Build.SourcesDirectory)/target'
+#    artifact: 'osm-tools-jars'
+#    publishLocation: 'pipeline'
 
 - task: Docker@2
   inputs:
     containerRegistry: 'docker-krizleebear'
-    repository: 'osm-tools'
-    command: 'build'
+    repository: 'krizleebear/osm-tools'
+    command: 'buildAndPush'
     Dockerfile: '**/Dockerfile'
