@@ -90,10 +90,11 @@ public class GeoJSONUtils {
 	}
 	
 	public static void addAttributeIfMissing(JsonObject properties, String key, JsonElement value) {
-		if (!properties.has(key) && value != null) {
-			if (!value.isJsonNull() && !value.getAsString().isEmpty()) {
-				properties.add(key, value);
-			}
+		if (!properties.has(key) && value != null && !value.isJsonNull()) {
+            if (value.isJsonPrimitive() && value.getAsString().isEmpty()) {
+                return;
+            }
+            properties.add(key, value);
 		}
 	}
 
