@@ -29,4 +29,11 @@ set -exu
 java \$JAVA_OPTS -jar /app/app.jar \$@
 EOT
 
+COPY --chmod=755 <<EOT /simplify.sh
+#!/usr/bin/env bash
+set -exu
+java \$JAVA_OPTS -cp /app/app.jar net.leberfinger.geo.GeoJSONSimplify \$@
+EOT
+
+
 ENTRYPOINT ["/entrypoint.sh"]

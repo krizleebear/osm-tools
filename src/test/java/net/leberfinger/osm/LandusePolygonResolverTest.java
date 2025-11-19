@@ -41,8 +41,11 @@ class LandusePolygonResolverTest {
 		List<String> result = Files.readAllLines(resultJSON);
 		assertThat(result).isNotEmpty();
 		assertThat(result).hasSize(2);
-		
-		
 	}
 
+    @Test
+    void resolveOverture(){
+        String oberroidhamDivisionPlace = "{ \"type\": \"Feature\", \"properties\": { \"id\": \"4be7fea6-c8dc-4de9-ae5e-eac0283270cb\", \"name\": \"Oberroidham\", \"subtype\": \"locality\", \"class\": \"hamlet\", \"names\": { \"primary\": \"Oberroidham\", \"common\": null, \"rules\": null }, \"country\": \"DE\", \"region\": \"DE-BY\", \"hierarchies\": [ [ { \"division_id\": \"567d1698-7209-4b94-b7b8-0bc71bde0104\", \"subtype\": \"country\", \"name\": \"Deutschland\" }, { \"division_id\": \"83df49db-87df-4925-80fb-1fbb9cc9802b\", \"subtype\": \"region\", \"name\": \"Bayern\" }, { \"division_id\": \"9ff5beeb-d727-443f-9b87-744d462e99ad\", \"subtype\": \"county\", \"name\": \"Landkreis Traunstein\" }, { \"division_id\": \"794a9d41-9a23-4c5c-80dd-c44cecc727c7\", \"subtype\": \"locality\", \"name\": \"Palling\" }, { \"division_id\": \"4be7fea6-c8dc-4de9-ae5e-eac0283270cb\", \"subtype\": \"locality\", \"name\": \"Oberroidham\" } ] ], \"population\": null, \"source_record_id\": \"n390754681@1\", \"wikidata\": null }, \"geometry\": { \"type\": \"Point\", \"coordinates\": [ 12.6864999, 48.0127137 ] } }";
+        String oberroidhamLandusePolygon = "";
+    }
 }
