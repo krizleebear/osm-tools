@@ -36,11 +36,17 @@ public class GeoJSONSimplify {
 
         Path inFile = Paths.get(args[0]);
 
+        long sizeBefore = Files.size(inFile);
         GeoJSONSimplify simplifier = new GeoJSONSimplify();
-        simplifier.simplifyLines(inFile);
+        Path destFile = simplifier.simplifyLines(inFile);
+        long sizeSimplified = Files.size(destFile);
+        double sizePercent = (double) sizeSimplified / sizeBefore * 100;
+
+        String msg = String.format("Simplified %s saving %.0f%% space", inFile.getFileName(), 100-sizePercent);
+        System.out.println(msg);
     }
 
-    public void simplifyLines(Path origFile) throws IOException {
+    public Path simplifyLines(Path origFile) throws IOException {
         Path destFile = getDestFile(origFile);
         try (Writer w = Files.newBufferedWriter(destFile);
              Stream<String> lines = Files.lines(origFile)) {
@@ -54,6 +60,7 @@ public class GeoJSONSimplify {
                 }
             });
         }
+        return destFile;
     }
 
     protected JsonObject simplifyLine(String line) throws ParseException {
@@ -66,8 +73,10 @@ public class GeoJSONSimplify {
         String geometryJSON = json.remove("geometry").toString();
         Geometry geometry = geoReader.read(geometryJSON);
 
-        // todo: calculate distance tolerance according to geometry size
-        Geometry simplified = TopologyPreservingSimplifier.simplify(geometry, 0.001);
+
+        double distanceTolerance = getDistanceTolerance(geometry);
+
+        Geometry simplified = TopologyPreservingSimplifier.simplify(geometry, distanceTolerance);
 
         // it's a pity we have to first write and then parse it,
         // but the JTS IO API offers no other way.
@@ -76,14 +85,30 @@ public class GeoJSONSimplify {
         json.add("geometry", simplifiedObject);
 
         JsonObject properties = GeoJSONUtils.getProperties(json);
-        properties.addProperty("numPoints", geometry.getNumPoints());
+    }
+
+    /**
+     * calculate distance tolerance according to geometry size
+     *
+     * @param geometry
+     * @return
+     */
+    private static double getDistanceTolerance(Geometry geometry) {
+        Geometry envelope = geometry.getEnvelope();
+        double envelopeArea = envelope.getArea();
+        double distanceTolerance = 0.0005;
+        if(envelopeArea > 0.3)
+        {
+            distanceTolerance = 0.001;
+        }
+        return distanceTolerance;
     }
 
     private static Path getDestFile(Path origFile) {
         String origFilename = origFile.getFileName().toString();
         origFilename = FilenameUtils.removeExtension(origFilename);
         String destFilename = origFilename + ".simplified.geojsonseq";
-        return origFile.getParent().resolve(destFilename);
+        return origFile.resolveSibling(destFilename);
     }
 
 }
