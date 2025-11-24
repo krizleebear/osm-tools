@@ -36,4 +36,4 @@ java \$JAVA_OPTS -cp /app/app.jar net.leberfinger.geo.GeoJSONSimplify \$@
 EOT
 
 
-ENTRYPOINT ["/entrypoint.sh"]
+CMD ["/entrypoint.sh"]
