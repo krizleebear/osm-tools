@@ -11,8 +11,8 @@ trigger:
   branches:
     include:
     - master
-    exclude:
-    - '*'
+#    exclude:
+#    - '*'
   paths:
     exclude:
     - azure-pipelines-download-osm.yml
