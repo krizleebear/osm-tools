@@ -21,7 +21,9 @@ COPY --from=build /workspace/target/*jar-with-dependencies.jar app.jar
 # Create a non-root user for security
 RUN groupadd -r osmtools && useradd -r -g osmtools osmtools
 RUN chown -R osmtools:osmtools /app
-USER osmtools
+
+# disable this user because azure pipelines wants to create a new user
+#USER osmtools
 
 COPY --chmod=755 <<EOT /entrypoint.sh
 #!/usr/bin/env bash
@@ -34,6 +36,5 @@ COPY --chmod=755 <<EOT /simplify.sh
 set -exu
 java \$JAVA_OPTS -cp /app/app.jar net.leberfinger.geo.GeoJSONSimplify \$@
 EOT
-
 
 CMD ["/entrypoint.sh"]
