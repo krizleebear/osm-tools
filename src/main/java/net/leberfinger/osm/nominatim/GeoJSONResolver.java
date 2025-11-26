@@ -1,9 +1,6 @@
 package net.leberfinger.osm.nominatim;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.io.UncheckedIOException;
-import java.io.Writer;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,7 +11,12 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
+import org.apache.commons.compress.archivers.ArchiveEntry;
+import org.apache.commons.compress.archivers.ArchiveInputStream;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
+import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.input.CloseShieldInputStream;
 import org.locationtech.jts.io.ParseException;
 
 import com.google.gson.JsonArray;
@@ -121,7 +123,7 @@ public class GeoJSONResolver {
 		return resolver.getStatistics();
 	}
 	
-	public static void main(String[] args) throws IOException, ParseException {
+	public static void main(String[] args) throws IOException {
 		
 		OptionParser parser = new OptionParser(); 
 		
@@ -146,7 +148,11 @@ public class GeoJSONResolver {
 		Path inputFile = Paths.get(options.valueOf("input-file").toString());
 
 		final PolygonCache polygons = new PolygonCache();
-		if(Files.isDirectory(polygonFile))
+        if(isTarGZ(polygonFile))
+        {
+            cachePolygonsFromTarGZ(polygons, polygonFile);
+        }
+		else if(Files.isDirectory(polygonFile))
 		{
             try (Stream<Path> polyFiles = Files.list(polygonFile)) {
                 polyFiles.forEach(singlePolygonFile -> {
@@ -188,6 +194,34 @@ public class GeoJSONResolver {
 	protected static boolean wasAlreadyProcessed(Path geojsonFile) {
 		return geojsonFile.getFileName().toString().contains(".resolved.");
 	}
+
+    private static boolean isTarGZ(Path polygonFile) {
+        return polygonFile.getFileName().toString().endsWith(".tar.gz");
+    }
+
+    private static void cachePolygonsFromTarGZ(final PolygonCache polygons, Path tarFile) {
+        try (InputStream fin = Files.newInputStream(tarFile);
+             InputStream bin = new BufferedInputStream(fin);
+             InputStream gzin = new GzipCompressorInputStream(bin);
+             ArchiveInputStream tarIn = new TarArchiveInputStream(gzin);
+        ) {
+            ArchiveEntry entry;
+            while ((entry = tarIn.getNextEntry()) != null) {
+                if (!tarIn.canReadEntryData(entry)) {
+                    System.out.println("Can't read entry " + entry);
+                    continue;
+                }
+                if (!entry.isDirectory()) {
+                    System.out.print(entry.getName());
+                    CloseShieldInputStream dontCloseInStream = CloseShieldInputStream.wrap(tarIn);
+                    polygons.importGeoJSONStream(new InputStreamReader(dontCloseInStream));
+                    System.out.println();
+                }
+            }
+        } catch (IOException | ParseException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
 	private static void cachePolygons(final PolygonCache polygons, Path singlePolygonFile) {
 		try (Reader r = Files.newBufferedReader(singlePolygonFile, StandardCharsets.UTF_8)) {
