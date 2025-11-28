@@ -4,8 +4,8 @@
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
 
-#trigger:
-#- master
+variables:
+  DOCKER_BUILDKIT: 1
 
 trigger:
   branches:
