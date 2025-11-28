@@ -1,5 +1,7 @@
 package net.leberfinger.osm.nominatim;
 
+import java.util.Arrays;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.locationtech.jts.geom.Geometry;
@@ -170,14 +172,16 @@ public class AdminPlace {
 		return builder.toString();
 	}
 
+    public Optional<JsonElement> getFirstExistingProperty(String... keys) {
+        return Arrays.stream(keys)
+                .map(json::get)
+                .filter(Objects::nonNull)
+                .findFirst();
+    }
+
 	public Optional<String> getName()
 	{
-		JsonElement nameElement = getJSON().get("name");
-		if(nameElement == null)
-		{
-			return Optional.empty();
-		}
-		return Optional.of(nameElement.getAsString());
+        return getFirstExistingProperty("official_name", "name").map(JsonElement::getAsString);
 	}
 	
 	public long getPlaceID() {
