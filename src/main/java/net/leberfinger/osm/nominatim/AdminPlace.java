@@ -179,9 +179,19 @@ public class AdminPlace {
                 .findFirst();
     }
 
+    public Optional<String> getFirstNonEmptyStringProperty(String ... keys) {
+        return Arrays.stream(keys)
+                .map(json::get)
+                .filter(Objects::nonNull)
+                .map(JsonElement::getAsString)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .findFirst();
+    }
+
 	public Optional<String> getName()
 	{
-        return getFirstExistingProperty("official_name", "name").map(JsonElement::getAsString);
+        return getFirstNonEmptyStringProperty("official_name", "int_name", "name:en", "name");
 	}
 	
 	public long getPlaceID() {
