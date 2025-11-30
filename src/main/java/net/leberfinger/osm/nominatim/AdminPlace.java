@@ -4,12 +4,14 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 
+import com.google.gson.JsonParser;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.prep.PreparedGeometry;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import org.locationtech.jts.io.geojson.GeoJsonWriter;
 
 public class AdminPlace {
 
@@ -83,7 +85,6 @@ public class AdminPlace {
 	public AdminLevel getAdminLevel()
 	{
 		return this.adminLevel;
-		//return json.get("admin_level").getAsInt();
 	}
 	
 	/**
@@ -117,7 +118,11 @@ public class AdminPlace {
 		addIfMissing(properties, "addr:county", nominatimAddress.get("addr:county"));
 		addIfMissing(properties, "addr:state", nominatimAddress.get("addr:state"));
 		addIfMissing(properties, "addr:country", nominatimAddress.get("addr:country"));
-		
+
+        // if country was not set yet, use the level below
+        // this can happen e.g. for France, where AdminLvl 2 includes oversea regions
+        // that are not included in the geofabrik export for France.
+        addIfMissing(properties, "addr:country", nominatimAddress.get("addr:adminlvl_3"));
 		
 		// if city was not set, try other place forms, e.g. town, village
 		// @see https://wiki.openstreetmap.org/wiki/Key:place
@@ -136,6 +141,10 @@ public class AdminPlace {
             addIfMissing(properties, "divisionID", divisionID);
         });
 	}
+
+    public Optional<String> getSourceDataID() {
+        return getFirstExistingProperty("division_id", "@id").map(JsonElement::getAsString);
+    }
 
     public Optional<JsonElement> getDivisionID()
     {
@@ -168,9 +177,30 @@ public class AdminPlace {
 		StringBuilder builder = new StringBuilder();
 		builder.append("AdminPlace [address=");
 		builder.append(getAddress());
+        builder.append(", sourceID=");
+        builder.append(getSourceDataID());
 		builder.append("]");
 		return builder.toString();
 	}
+
+    public String toGeoJSON()
+    {
+        GeoJsonWriter geoWriter = new GeoJsonWriter(7);
+        JsonParser parser = new JsonParser();
+
+        // it's a pity we have to first write and then parse it,
+        // but the JTS IO API offers no other way.
+        String geometryString = geoWriter.write(this.geometry.getGeometry());
+        JsonObject geometryJSON = parser.parse(geometryString).getAsJsonObject();
+        
+        JsonObject geoJSON = new JsonObject();
+        geoJSON.addProperty("type", "Feature");
+        geoJSON.add("properties", this.getJSON());
+        geoJSON.add("geometry", geometryJSON);
+
+        // make a defensive copy to avoid exposing our internal JSON properties
+        return geoJSON.toString();
+    }
 
     public Optional<JsonElement> getFirstExistingProperty(String... keys) {
         return Arrays.stream(keys)

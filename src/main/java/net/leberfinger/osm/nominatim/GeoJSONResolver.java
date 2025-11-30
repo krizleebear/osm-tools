@@ -3,6 +3,7 @@ package net.leberfinger.osm.nominatim;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -147,6 +148,8 @@ public class GeoJSONResolver {
 		Path polygonFile = Paths.get(options.valueOf("poly-file").toString());
 		Path inputFile = Paths.get(options.valueOf("input-file").toString());
 
+        checkFilesAreAccessible(polygonFile, inputFile);
+
 		final PolygonCache polygons = new PolygonCache();
         if(isTarGZ(polygonFile))
         {
@@ -190,6 +193,14 @@ public class GeoJSONResolver {
 			resolver.resolveLinesInFile(inputFile);
 		}
 	}
+
+    private static void checkFilesAreAccessible(Path... files) throws NoSuchFileException {
+        for (Path file : files) {
+            if(!Files.isReadable(file)) {
+                throw new NoSuchFileException(file.toAbsolutePath().toString());
+            }
+        }
+    }
 
 	protected static boolean wasAlreadyProcessed(Path geojsonFile) {
 		return geojsonFile.getFileName().toString().contains(".resolved.");

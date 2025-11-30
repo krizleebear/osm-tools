@@ -1,5 +1,6 @@
 package net.leberfinger.osm.nominatim;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
@@ -8,6 +9,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
 
+import com.google.gson.JsonElement;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.io.ParseException;
 
@@ -100,4 +103,35 @@ class GeoJSONResolverTest {
 		assertFalse(GeoJSONResolver.wasAlreadyProcessed(Paths.get("test.geojson")));
 		assertTrue(GeoJSONResolver.wasAlreadyProcessed(Paths.get("test.resolved.geojson")));
 	}
+
+    /**
+     * The following code can be used to export the full hierarchy of AdminPlaces for a given location to GeoJSON.
+     *
+     * @throws IOException
+     * @throws ParseException
+     */
+    @Disabled
+    @Test
+    void exportResolvedHierarchy() throws IOException, ParseException {
+        PolygonCache polygons = PolygonCache.fromGeoJSONStream(Paths.get(TEST_RESOURCES_DIR, "frenchTestHierarchy.geojsonseq"));
+        double lat = 48.8528351;
+        double lon = 2.3460262;
+        try (BufferedWriter bw = Files.newBufferedWriter(Paths.get("resolvedHierarchy.geojsonseq"))) {
+            polygons.exportGeoJSONHierarchy(lat, lon, bw);
+        }
+    }
+
+   @Test
+   void franceAdminLevel2Missing() throws IOException, ParseException {
+        String parisPOI = "{ \"type\": \"Feature\", \"properties\": { \"id\": \"20fec114-a7ff-400e-94fd-29cec9251212\", \"version\": 4, \"names\": { \"primary\": \"Red Grill Steak House\", \"common\": null, \"rules\": null }, \"categories\": { \"primary\": \"restaurant\", \"alternate\": [ \"asian_restaurant\", \"diner\" ] }, \"confidence\": 0.98283596645211624, \"basic_category\": \"restaurant\", \"confidence_1\": 0.98283596645211624, \"websites\": [ \"https:\\/\\/redgrill.fr\\/\" ], \"addresses\": [ { \"freeform\": \"11 Rue de la Huchette\", \"locality\": \"Paris\", \"postcode\": \"75005\", \"region\": null, \"country\": \"FR\" } ], \"country\": \"FR\", \"region\": null }, \"geometry\": { \"type\": \"Point\", \"coordinates\": [ 2.3460262, 48.8528351 ] } }";
+
+       PolygonCache polygons = PolygonCache.fromGeoJSONStream(Paths.get(TEST_RESOURCES_DIR, "frenchTestHierarchy.geojsonseq"));
+       GeoJSONResolver resolver = new GeoJSONResolver(polygons);
+       //Optional<AdminPlace> resolvedAndOrdered = polygons.resolve(48.8528351, 2.3460262);
+       JsonObject fullyResolved = resolver.addAddress(parisPOI);
+       JsonObject properties = fullyResolved.getAsJsonObject("properties");
+       JsonElement countryProperty = properties.get("addr:country");
+       assertNotNull(countryProperty);
+       assertEquals("France métropolitaine", countryProperty.getAsString());
+   }
 }

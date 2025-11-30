@@ -3,6 +3,7 @@ package net.leberfinger.osm.nominatim;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
+import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -57,6 +58,18 @@ public class PolygonCache implements IAdminResolver {
 
 		return polys;
 	}
+
+    public void exportGeoJSONHierarchy(double lat, double lon, Writer w) {
+        MutableList<AdminPlace> resolved = resolveRaw(lat, lon);
+        resolved.stream().map(AdminPlace::toGeoJSON).forEach(str -> {
+            try {
+                w.write(str);
+                w.write("\n");
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
 	
 	/**
 	 * Import a file of line delimited GeoJSON objects.
@@ -174,26 +187,31 @@ public class PolygonCache implements IAdminResolver {
 		index.insert(envelope, place);
 	}
 
+    public MutableList<AdminPlace> resolveRaw(double lat, double lon){
+        Coordinate coordinate = new Coordinate(lon, lat);
+        Point jtsPoint = geoFactory.createPoint(coordinate);
+        final Envelope pointEnvelope = jtsPoint.getEnvelopeInternal();
+
+        @SuppressWarnings("unchecked")
+        List<AdminPlace> result = index.query(pointEnvelope);
+
+        MutableList<AdminPlace> coveringPlaces = Lists.mutable.empty();
+        for (AdminPlace place : result) {
+            if (place.covers(jtsPoint)) {
+                coveringPlaces.add(place);
+            }
+        }
+
+        // order places by admin_level to return most detailed information and not
+        // only "country=Germany" or such
+        coveringPlaces.sortThisByInt(place -> place.getAdminLevel().getOsmAdminLevel());
+
+        return coveringPlaces;
+    }
+
 	@Override
 	public Optional<AdminPlace> resolve(double lat, double lon) {
-		Coordinate coordinate = new Coordinate(lon, lat);
-		Point jtsPoint = geoFactory.createPoint(coordinate);
-		final Envelope pointEnvelope = jtsPoint.getEnvelopeInternal();
-
-		@SuppressWarnings("unchecked")
-		List<AdminPlace> result = index.query(pointEnvelope);
-
-		MutableList<AdminPlace> coveringPlaces = Lists.mutable.empty();
-
-		for (AdminPlace place : result) {
-			if (place.covers(jtsPoint)) {
-				coveringPlaces.add(place);
-			}
-		}
-
-		// order places by admin_level to return most detailed information and not
-		// only "country=Germany" or such
-		coveringPlaces.sortThisByInt(place -> place.getAdminLevel().getOsmAdminLevel());
+        MutableList<AdminPlace> coveringPlaces = resolveRaw(lat, lon);
 
         // at the borders of polygons, conflicting results could appear
         // e.g. a mountain top being assign to both Germany and Austria
