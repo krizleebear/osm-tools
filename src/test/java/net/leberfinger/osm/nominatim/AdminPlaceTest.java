@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class AdminPlaceTest {
 
     @Test
-    void preferOfficialName() {
+    void preferOfficialCountryName() {
 
         JsonParser parser = new JsonParser();
         JsonObject json = parser.parse("{\n" +

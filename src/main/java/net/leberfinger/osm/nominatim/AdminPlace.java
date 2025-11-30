@@ -191,7 +191,13 @@ public class AdminPlace {
 
 	public Optional<String> getName()
 	{
-        return getFirstNonEmptyStringProperty("official_name", "int_name", "name:en", "name");
+        switch (adminLevel) {
+            case COUNTRY:
+            case STATE:
+                return getFirstNonEmptyStringProperty("official_name", "int_name", "name:en", "name");
+        }
+
+        return getFirstNonEmptyStringProperty("name", "official_name", "name:en");
 	}
 	
 	public long getPlaceID() {
