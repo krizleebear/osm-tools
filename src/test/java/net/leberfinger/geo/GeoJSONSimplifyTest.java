@@ -1,6 +1,7 @@
 package net.leberfinger.geo;
 
 import com.google.gson.JsonObject;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.io.ParseException;
 
@@ -39,6 +40,14 @@ class GeoJSONSimplifyTest {
         Path inFile = Paths.get(TEST_RESOURCES_DIR, "polygon-palling.geojsonseq");
         GeoJSONSimplify s = new GeoJSONSimplify();
         s.simplifyLines(inFile);
+    }
+
+    @Test
+    void simplifyCoverage() throws IOException {
+        //Path inFile = Paths.get( "countries-full.geojsonseq");
+        Path inFile = Paths.get( TEST_RESOURCES_DIR, "frenchTestHierarchy.geojsonseq");
+        GeoJSONSimplify s = new GeoJSONSimplify();
+        s.simplifyCoverage(inFile, 0.01);
     }
 
 }

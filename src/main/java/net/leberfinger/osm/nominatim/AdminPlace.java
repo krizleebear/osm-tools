@@ -186,6 +186,7 @@ public class AdminPlace {
     public String toGeoJSON()
     {
         GeoJsonWriter geoWriter = new GeoJsonWriter(7);
+        geoWriter.setEncodeCRS(false);
         JsonParser parser = new JsonParser();
 
         // it's a pity we have to first write and then parse it,

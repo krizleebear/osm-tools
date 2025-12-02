@@ -4,6 +4,10 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.apache.commons.io.FilenameUtils;
+import org.eclipse.collections.api.list.primitive.MutableDoubleList;
+import org.eclipse.collections.impl.factory.Lists;
+import org.eclipse.collections.impl.factory.primitive.DoubleLists;
+import org.locationtech.jts.coverage.CoverageSimplifier;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.io.ParseException;
@@ -11,11 +15,13 @@ import org.locationtech.jts.io.geojson.GeoJsonReader;
 import org.locationtech.jts.io.geojson.GeoJsonWriter;
 import org.locationtech.jts.simplify.TopologyPreservingSimplifier;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.stream.Stream;
 
 public class GeoJSONSimplify {
@@ -46,6 +52,31 @@ public class GeoJSONSimplify {
         System.out.println(msg);
     }
 
+    /**
+     * Read all lines from a file as a {@code Stream} and parse it to GeoJSON.
+     *
+     * @apiNote
+     * This method must be used within a try-with-resources statement or similar
+     * control structure to ensure that the stream's open file is closed promptly
+     * after the stream's operations have completed.
+     *
+     * @param   inFile
+     *          the path to the file
+     *
+     * @return  GeoJSON lines from the file as a {@code Stream}
+     *
+     * @throws  IOException
+     *          if an I/O error occurs opening the file
+     *
+     */
+    public Stream<GeoJSON> streamParsedGeoJSONLines(Path inFile) throws IOException {
+        //noinspection resource
+        return Files.lines(inFile)
+                .map(parser::parse)
+                .map(JsonElement::getAsJsonObject)
+                .map(GeoJSON::fromJSON);
+    }
+
     public Path simplifyLines(Path origFile) throws IOException {
         Path destFile = getDestFile(origFile);
         try (Writer w = Files.newBufferedWriter(destFile);
@@ -73,9 +104,7 @@ public class GeoJSONSimplify {
         String geometryJSON = json.remove("geometry").toString();
         Geometry geometry = geoReader.read(geometryJSON);
 
-
         double distanceTolerance = getDistanceTolerance(geometry);
-
         Geometry simplified = TopologyPreservingSimplifier.simplify(geometry, distanceTolerance);
 
         // it's a pity we have to first write and then parse it,
@@ -83,8 +112,6 @@ public class GeoJSONSimplify {
         String simplifiedJSON = geoWriter.write(simplified);
         JsonElement simplifiedObject = parser.parse(simplifiedJSON);
         json.add("geometry", simplifiedObject);
-
-        JsonObject properties = GeoJSONUtils.getProperties(json);
     }
 
     /**
@@ -111,4 +138,28 @@ public class GeoJSONSimplify {
         return origFile.resolveSibling(destFilename);
     }
 
+    public void simplifyCoverage(Path inFile, double distanceTolerance) throws IOException {
+        List<Geometry> polygons = Lists.mutable.empty();
+        List<JsonObject> properties = Lists.mutable.empty();
+        MutableDoubleList tolerances = DoubleLists.mutable.empty();
+        streamParsedGeoJSONLines(inFile).forEach(geoJSON ->
+        {
+            polygons.add(geoJSON.geometry);
+            properties.add(geoJSON.properties);
+            //tolerances.add(getDistanceTolerance(geoJSON.geometry));
+            //tolerances.add(0.01);
+            tolerances.add(distanceTolerance);
+        });
+
+        CoverageSimplifier simplifier = new CoverageSimplifier(polygons.toArray(new Geometry[]{}));
+        Geometry[] simplified = simplifier.simplify(tolerances.toArray());
+
+        try (BufferedWriter bw = Files.newBufferedWriter(getDestFile(inFile))) {
+            for (int i = 0; i < simplified.length; i++) {
+                GeoJSON geoJSON = new GeoJSON(simplified[i], properties.get(i));
+                bw.write(geoJSON.toJSON().toString());
+                bw.write('\n');
+            }
+        }
+    }
 }
