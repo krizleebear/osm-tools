@@ -101,6 +101,7 @@ public class GeoJSONSimplify {
      * optional coverage simplification, and optional coastal buffering.
      */
     public Path process(Path inFile, double distanceTolerance, double bufferDistance, boolean useCoverage) throws IOException {
+        long startTime = System.currentTimeMillis();
         long sizeBefore = Files.size(inFile);
         List<GeoJSON> allFeatures = Lists.mutable.empty();
         try (Stream<GeoJSON> stream = GeoJSON.streamParsedGeoJSONLines(inFile)) {
@@ -165,9 +166,10 @@ public class GeoJSONSimplify {
 
         long sizeAfter = Files.size(destFile);
         double spaceSavedPercent = sizeBefore > 0 ? (1.0 - (double) sizeAfter / sizeBefore) * 100 : 0;
+        long elapsedTimeMs = System.currentTimeMillis() - startTime;
 
         printExecutionSummary(inFile.getFileName().toString(), totalFeatures, polygonalFeatures, nonPolygonalFeatures,
-                groups, coverageSuccessGroups, coverageFallbackGroups, bufferDistance, sizeBefore, sizeAfter, spaceSavedPercent);
+                groups, coverageSuccessGroups, coverageFallbackGroups, bufferDistance, sizeBefore, sizeAfter, spaceSavedPercent, elapsedTimeMs);
 
         try {
             GeoJSONSimplifyVerifier.VerificationResult vResult = GeoJSONSimplifyVerifier.verify(inFile, destFile);
@@ -181,7 +183,8 @@ public class GeoJSONSimplify {
 
     private void printExecutionSummary(String filename, int totalFeatures, int polygonalFeatures, int nonPolygonalFeatures,
                                        Map<String, List<GeoJSON>> groups, int coverageSuccess, int coverageFallback,
-                                       double bufferDistance, long sizeBefore, long sizeAfter, double spaceSavedPercent) {
+                                       double bufferDistance, long sizeBefore, long sizeAfter, double spaceSavedPercent,
+                                       long elapsedTimeMs) {
         StringBuilder groupStr = new StringBuilder();
         int count = 0;
         for (Map.Entry<String, List<GeoJSON>> entry : groups.entrySet()) {
@@ -189,6 +192,10 @@ public class GeoJSONSimplify {
             groupStr.append(entry.getKey()).append(": ").append(entry.getValue().size());
             count++;
         }
+
+        double durationSec = elapsedTimeMs / 1000.0;
+        double featuresPerSec = durationSec > 0 ? totalFeatures / durationSec : 0;
+        double mbPerSec = durationSec > 0 ? (sizeBefore / (1024.0 * 1024.0)) / durationSec : 0;
 
         System.out.println("============================================================");
         System.out.println(" GeoJSONSimplify Execution Summary");
@@ -200,6 +207,8 @@ public class GeoJSONSimplify {
         System.out.println(" Simplification:     Coverage Mode (" + coverageSuccess + " succeeded, " + coverageFallback + " fallbacks)");
         System.out.println(" Coastal Buffer:     " + (bufferDistance > 0 ? String.format(Locale.ROOT, "%.4f degrees (~%.1f km)", bufferDistance, bufferDistance * 111.0) : "Disabled"));
         System.out.println(" File Size:          " + String.format(Locale.ROOT, "%,d -> %,d bytes (%.1f%% saved)", sizeBefore, sizeAfter, spaceSavedPercent));
+        System.out.println(" Execution Duration: " + String.format(Locale.ROOT, "%.2f seconds (%.1f min)", durationSec, durationSec / 60.0));
+        System.out.println(" Throughput KPI:     " + String.format(Locale.ROOT, "%,.1f features/sec (%.2f MB/sec)", featuresPerSec, mbPerSec));
         System.out.println("============================================================");
     }
 
