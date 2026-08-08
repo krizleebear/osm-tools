@@ -206,10 +206,21 @@ public class GeoJSONSimplify {
         System.out.println(" Hierarchy Groups:   " + groups.size() + " (" + groupStr + ")");
         System.out.println(" Simplification:     Coverage Mode (" + coverageSuccess + " succeeded, " + coverageFallback + " fallbacks)");
         System.out.println(" Coastal Buffer:     " + (bufferDistance > 0 ? String.format(Locale.ROOT, "%.4f degrees (~%.1f km)", bufferDistance, bufferDistance * 111.0) : "Disabled"));
-        System.out.println(" File Size:          " + String.format(Locale.ROOT, "%,d -> %,d bytes (%.1f%% saved)", sizeBefore, sizeAfter, spaceSavedPercent));
-        System.out.println(" Execution Duration: " + String.format(Locale.ROOT, "%.2f seconds (%.1f min)", durationSec, durationSec / 60.0));
-        System.out.println(" Throughput KPI:     " + String.format(Locale.ROOT, "%,.1f features/sec (%.2f MB/sec)", featuresPerSec, mbPerSec));
+        System.out.println(" File Size:          " + formatBytes(sizeBefore) + " -> " + formatBytes(sizeAfter) + String.format(Locale.ROOT, " (%.1f%% saved)", spaceSavedPercent));
+        System.out.println(" Execution Duration: " + String.format(Locale.ROOT, "%.1fs (%.1f min)", durationSec, durationSec / 60.0));
+        System.out.println(" Throughput KPI:     " + String.format(Locale.ROOT, "%,.0f features/sec (%.1f MB/sec)", featuresPerSec, mbPerSec));
         System.out.println("============================================================");
+    }
+
+    private String formatBytes(long bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return String.format(Locale.ROOT, "%.0f KB", bytes / 1024.0);
+        if (bytes < 1024 * 1024 * 1024) {
+            double mb = bytes / (1024.0 * 1024.0);
+            return mb >= 10 ? String.format(Locale.ROOT, "%.0f MB", mb) : String.format(Locale.ROOT, "%.1f MB", mb);
+        }
+        double gb = bytes / (1024.0 * 1024.0 * 1024.0);
+        return String.format(Locale.ROOT, "%.1f GB", gb);
     }
 
     private String getGitCommitInfo() {

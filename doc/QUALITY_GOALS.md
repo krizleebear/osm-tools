@@ -18,3 +18,8 @@ This document outlines the core architectural and spatial quality goals of `osm-
 
 ## 4. Robustheit & CI/CD-Kompatibilität
 - **Locale-Unabhängigkeit:** Alle numerischen Werte und Geometrien werden strikt locale-unabhängig (`Locale.ROOT`) verarbeitet und ausgebunden, um Formatierungsfehler (z. B. Dezimalkomma vs. Punkt) in internationalen Pipeline-Umgebungen auszuschließen.
+
+## 5. Rückverfolgbarkeit, Lesbarkeit & Usability (Traceability & Usability)
+- **Lückenlose Rückverfolgbarkeit:** Jeder Log-Ausdruck enthält den exakten Git-Commit-Hash und Build-Zeitstempel der ausgeführten Anwendungsversion, um Pipeline-Läufe eindeutig zuordnen zu können.
+- **Lesbarkeit & Gerundete Einheiten:** Dateigrößen, Durchsätze und Ausführungszeiten werden menschenlesbar und gerundet ausgegeben (z. B. `340 MB -> 70 MB` statt unleserlicher Byte-Kolonnen).
+- **Benutzerfreundlichkeit (Usability):** Der visuelle Map Viewer ermöglicht die einfache Inspektion von GeoJSON-Dateien per intuitiver Drag & Drop Interaktion.
