@@ -92,11 +92,6 @@ public class GeoJSONSimplify {
         long sizeBefore = Files.size(inFile);
         GeoJSONSimplify simplifier = new GeoJSONSimplify();
         Path destFile = simplifier.process(inFile, tolerance, bufferDistance, useCoverage);
-        long sizeSimplified = Files.size(destFile);
-        double sizePercent = (double) sizeSimplified / sizeBefore * 100;
-
-        String msg = String.format("Processed %s saving %.0f%% space", inFile.getFileName(), 100 - sizePercent);
-        System.out.println(msg);
     }
 
     /**
@@ -104,9 +99,22 @@ public class GeoJSONSimplify {
      * optional coverage simplification, and optional coastal buffering.
      */
     public Path process(Path inFile, double distanceTolerance, double bufferDistance, boolean useCoverage) throws IOException {
+        long sizeBefore = Files.size(inFile);
         List<GeoJSON> allFeatures = Lists.mutable.empty();
         try (Stream<GeoJSON> stream = GeoJSON.streamParsedGeoJSONLines(inFile)) {
             stream.forEach(allFeatures::add);
+        }
+
+        int totalFeatures = allFeatures.size();
+        int polygonalFeatures = 0;
+        int nonPolygonalFeatures = 0;
+
+        for (GeoJSON f : allFeatures) {
+            if (f.geometry instanceof org.locationtech.jts.geom.Polygonal && !f.geometry.isEmpty()) {
+                polygonalFeatures++;
+            } else {
+                nonPolygonalFeatures++;
+            }
         }
 
         // Group features by hierarchy level to prevent CoverageSimplifier errors between overlapping levels
@@ -116,10 +124,22 @@ public class GeoJSONSimplify {
             groups.computeIfAbsent(key, k -> new ArrayList<>()).add(feature);
         }
 
+        int coverageSuccessGroups = 0;
+        int coverageFallbackGroups = 0;
+
         List<GeoJSON> processedFeatures = new ArrayList<>();
 
         for (List<GeoJSON> group : groups.values()) {
-            List<Geometry> simplifiedGeometries = simplifyGroup(group, distanceTolerance, useCoverage);
+            boolean[] usedFallback = new boolean[]{false};
+            List<Geometry> simplifiedGeometries = simplifyGroup(group, distanceTolerance, useCoverage, usedFallback);
+            if (useCoverage && group.size() > 1) {
+                if (usedFallback[0]) {
+                    coverageFallbackGroups++;
+                } else {
+                    coverageSuccessGroups++;
+                }
+            }
+
             List<Geometry> bufferedGeometries = bufferGroup(simplifiedGeometries, bufferDistance);
 
             for (int i = 0; i < group.size(); i++) {
@@ -136,10 +156,40 @@ public class GeoJSONSimplify {
                 bw.write('\n');
             }
         }
+
+        long sizeAfter = Files.size(destFile);
+        double spaceSavedPercent = sizeBefore > 0 ? (1.0 - (double) sizeAfter / sizeBefore) * 100 : 0;
+
+        printExecutionSummary(inFile.getFileName().toString(), totalFeatures, polygonalFeatures, nonPolygonalFeatures,
+                groups, coverageSuccessGroups, coverageFallbackGroups, bufferDistance, sizeBefore, sizeAfter, spaceSavedPercent);
+
         return destFile;
     }
 
-    private List<Geometry> simplifyGroup(List<GeoJSON> group, double distanceTolerance, boolean useCoverage) {
+    private void printExecutionSummary(String filename, int totalFeatures, int polygonalFeatures, int nonPolygonalFeatures,
+                                       Map<String, List<GeoJSON>> groups, int coverageSuccess, int coverageFallback,
+                                       double bufferDistance, long sizeBefore, long sizeAfter, double spaceSavedPercent) {
+        StringBuilder groupStr = new StringBuilder();
+        int count = 0;
+        for (Map.Entry<String, List<GeoJSON>> entry : groups.entrySet()) {
+            if (count > 0) groupStr.append(", ");
+            groupStr.append(entry.getKey()).append(": ").append(entry.getValue().size());
+            count++;
+        }
+
+        System.out.println("============================================================");
+        System.out.println(" GeoJSONSimplify Execution Summary");
+        System.out.println(" File:               " + filename);
+        System.out.println(" Total Features:     " + String.format("%,d", totalFeatures) +
+                String.format(" (%,d Polygonal, %,d Non-Polygonal)", polygonalFeatures, nonPolygonalFeatures));
+        System.out.println(" Hierarchy Groups:   " + groups.size() + " (" + groupStr + ")");
+        System.out.println(" Simplification:     Coverage Mode (" + coverageSuccess + " succeeded, " + coverageFallback + " fallbacks)");
+        System.out.println(" Coastal Buffer:     " + (bufferDistance > 0 ? String.format("%.4f degrees (~%.1f km)", bufferDistance, bufferDistance * 111.0) : "Disabled"));
+        System.out.println(" File Size:          " + String.format("%,d -> %,d bytes (%.1f%% saved)", sizeBefore, sizeAfter, spaceSavedPercent));
+        System.out.println("============================================================");
+    }
+
+    private List<Geometry> simplifyGroup(List<GeoJSON> group, double distanceTolerance, boolean useCoverage, boolean[] usedFallback) {
         List<Geometry> geoms = new ArrayList<>();
         for (GeoJSON f : group) {
             geoms.add(f.geometry);
@@ -175,6 +225,9 @@ public class GeoJSONSimplify {
                     }
                     return result;
                 } catch (Exception e) {
+                    if (usedFallback != null && usedFallback.length > 0) {
+                        usedFallback[0] = true;
+                    }
                     System.err.println("Warning: CoverageSimplifier failed on group, falling back to individual simplification: " + e.getMessage());
                 }
             }

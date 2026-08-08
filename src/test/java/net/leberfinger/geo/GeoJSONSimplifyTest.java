@@ -53,6 +53,10 @@ class GeoJSONSimplifyTest {
         Files.deleteIfExists(destFile);
     }
 
+    /**
+     * Verifies that the hierarchical processing pipeline combines coverage simplification,
+     * coastal buffering, and hierarchy grouping without throwing exceptions on multi-level datasets.
+     */
     @Test
     void processWithBufferAndCoverage() throws IOException {
         Path inFile = Paths.get(TEST_RESOURCES_DIR, "frenchTestHierarchy.geojsonseq");
@@ -63,6 +67,10 @@ class GeoJSONSimplifyTest {
         Files.deleteIfExists(destFile);
     }
 
+    /**
+     * Tests the extraction of hierarchy grouping keys from feature properties
+     * (checking precedence for 'subtype', 'admin_level', 'class', and fallback defaults).
+     */
     @Test
     void getHierarchyGroupKey() {
         GeoJSONSimplify s = new GeoJSONSimplify();
@@ -83,6 +91,9 @@ class GeoJSONSimplifyTest {
         assertEquals("default", s.getHierarchyGroupKey(null));
     }
 
+    /**
+     * Verifies CLI main execution with explicit option arguments (--input, --buffer, --tolerance).
+     */
     @Test
     void mainCLI() throws Exception {
         Path inFile = Paths.get(TEST_RESOURCES_DIR, "polygon-palling.geojsonseq");
@@ -92,6 +103,11 @@ class GeoJSONSimplifyTest {
         Files.deleteIfExists(destFile);
     }
 
+    /**
+     * E2E Test: Verifies that coastal points of interest (POIs) located in coastal bays/water areas
+     * are covered by the buffered coastal municipality polygon, while ensuring that the coastal buffer
+     * does NOT intrude into the original geometry of adjacent inland municipalities.
+     */
     @Test
     void e2eCoastalPointResolutionTest() throws Exception {
         Path tempDir = Files.createTempDirectory("osm_tools_e2e");
@@ -133,6 +149,42 @@ class GeoJSONSimplifyTest {
         assertTrue(inlandIntrusion.getArea() < 1e-6, "Buffered coastal polygon should not intrude into neighboring inland municipality");
 
         // Cleanup
+        Files.deleteIfExists(simplifiedFile);
+        Files.deleteIfExists(inputGeojson);
+        Files.deleteIfExists(tempDir);
+    }
+
+    /**
+     * E2E Test: Verifies that CoverageSimplifier handles files containing mixed geometry types
+     * (e.g., admin boundary Polygons mixed with Point nodes or LineStrings) cleanly without throwing
+     * ClassCastExceptions, preserving non-polygonal features intact while simplifying polygonal coverages.
+     */
+    @Test
+    void e2eMixedGeometryCoverageTest() throws Exception {
+        Path tempDir = Files.createTempDirectory("osm_tools_mixed_e2e");
+        Path inputGeojson = tempDir.resolve("mixed_test.geojsonseq");
+
+        // Polygon A
+        String polyA = "{\"type\":\"Feature\",\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[[[10.0,50.0],[10.1,50.0],[10.1,50.1],[10.0,50.1],[10.0,50.0]]]},\"properties\":{\"name\":\"CityA\",\"subtype\":\"locality\"}}";
+        // Polygon B
+        String polyB = "{\"type\":\"Feature\",\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[[[10.1,50.0],[10.2,50.0],[10.2,50.1],[10.1,50.1],[10.1,50.0]]]},\"properties\":{\"name\":\"CityB\",\"subtype\":\"locality\"}}";
+        // Point feature (admin center node) mixed in the same hierarchy group
+        String pointNode = "{\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[10.05,50.05]},\"properties\":{\"name\":\"CityA Center\",\"subtype\":\"locality\"}}";
+
+        Files.write(inputGeojson, (polyA + "\n" + polyB + "\n" + pointNode + "\n").getBytes());
+
+        // Run default pipeline (coverage=true) on file containing mixed Point and Polygon features
+        GeoJSONSimplify.main(new String[]{inputGeojson.toString()});
+
+        Path simplifiedFile = tempDir.resolve("mixed_test.simplified.geojsonseq");
+        assertTrue(Files.exists(simplifiedFile));
+
+        List<GeoJSON> simplifiedFeatures = GeoJSON.streamParsedGeoJSONLines(simplifiedFile).collect(java.util.stream.Collectors.toList());
+        assertEquals(3, simplifiedFeatures.size());
+
+        // Verify the Point feature was preserved without crashing CoverageSimplifier
+        assertTrue(simplifiedFeatures.get(2).geometry instanceof org.locationtech.jts.geom.Point);
+
         Files.deleteIfExists(simplifiedFile);
         Files.deleteIfExists(inputGeojson);
         Files.deleteIfExists(tempDir);
