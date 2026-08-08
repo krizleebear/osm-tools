@@ -263,7 +263,8 @@ public class GeoJSONSimplify {
                 }
             }
 
-            if (polygons.size() > 1) {
+            // Guard against massive JTS segment graph heap allocations (> 2,500 polygons in single group)
+            if (polygons.size() > 1 && polygons.size() <= 2500) {
                 try {
                     double[] tolerances = new double[polygons.size()];
                     Arrays.fill(tolerances, distanceTolerance);
@@ -281,12 +282,17 @@ public class GeoJSONSimplify {
                         }
                     }
                     return result;
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     if (usedFallback != null && usedFallback.length > 0) {
                         usedFallback[0] = true;
                     }
-                    System.err.println("Warning: CoverageSimplifier failed on group, falling back to individual simplification: " + e.getMessage());
+                    System.err.println("Warning: CoverageSimplifier failed (" + e.getClass().getSimpleName() + "), falling back to individual simplification.");
                 }
+            } else if (polygons.size() > 2500) {
+                if (usedFallback != null && usedFallback.length > 0) {
+                    usedFallback[0] = true;
+                }
+                System.out.printf(Locale.ROOT, "  [Info] Group has %,d polygons (> 2,500). Using individual topology-preserving simplification to prevent OutOfMemoryError.\n", polygons.size());
             }
         }
 
