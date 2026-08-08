@@ -128,41 +128,37 @@ public class GeoJSONSimplify {
         int coverageSuccessGroups = 0;
         int coverageFallbackGroups = 0;
 
-        List<GeoJSON> processedFeatures = new ArrayList<>();
         int groupIndex = 1;
         int totalGroups = groups.size();
 
-        for (Map.Entry<String, List<GeoJSON>> entry : groups.entrySet()) {
-            String groupName = entry.getKey();
-            List<GeoJSON> group = entry.getValue();
-
-            System.out.printf(Locale.ROOT, "[%d/%d] Processing hierarchy group '%s' (%,d features)...\n",
-                    groupIndex++, totalGroups, groupName, group.size());
-
-            boolean[] usedFallback = new boolean[]{false};
-            List<Geometry> simplifiedGeometries = simplifyGroup(group, distanceTolerance, useCoverage, usedFallback);
-            if (useCoverage && group.size() > 1) {
-                if (usedFallback[0]) {
-                    coverageFallbackGroups++;
-                } else {
-                    coverageSuccessGroups++;
-                }
-            }
-
-            List<Geometry> bufferedGeometries = bufferGroup(groupName, simplifiedGeometries, bufferDistance);
-
-            for (int i = 0; i < group.size(); i++) {
-                GeoJSON original = group.get(i);
-                GeoJSON processed = new GeoJSON(bufferedGeometries.get(i), original.properties);
-                processedFeatures.add(processed);
-            }
-        }
-
         Path destFile = getDestFile(inFile);
         try (BufferedWriter bw = Files.newBufferedWriter(destFile)) {
-            for (GeoJSON feature : processedFeatures) {
-                bw.write(feature.toJSON().toString());
-                bw.write('\n');
+            for (Map.Entry<String, List<GeoJSON>> entry : groups.entrySet()) {
+                String groupName = entry.getKey();
+                List<GeoJSON> group = entry.getValue();
+
+                System.out.printf(Locale.ROOT, "[%d/%d] Processing hierarchy group '%s' (%,d features)...\n",
+                        groupIndex++, totalGroups, groupName, group.size());
+
+                boolean[] usedFallback = new boolean[]{false};
+                List<Geometry> simplifiedGeometries = simplifyGroup(group, distanceTolerance, useCoverage, usedFallback);
+                if (useCoverage && group.size() > 1) {
+                    if (usedFallback[0]) {
+                        coverageFallbackGroups++;
+                    } else {
+                        coverageSuccessGroups++;
+                    }
+                }
+
+                List<Geometry> bufferedGeometries = bufferGroup(groupName, simplifiedGeometries, bufferDistance);
+
+                for (int i = 0; i < group.size(); i++) {
+                    GeoJSON original = group.get(i);
+                    GeoJSON processed = new GeoJSON(bufferedGeometries.get(i), original.properties);
+                    bw.write(processed.toJSON().toString());
+                    bw.write('\n');
+                }
+                bw.flush();
             }
         }
 
