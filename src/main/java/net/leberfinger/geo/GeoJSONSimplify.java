@@ -263,36 +263,20 @@ public class GeoJSONSimplify {
                 }
             }
 
-            // Guard against massive JTS segment graph heap allocations (> 2,500 polygons in single group)
-            if (polygons.size() > 1 && polygons.size() <= 2500) {
-                try {
-                    double[] tolerances = new double[polygons.size()];
-                    Arrays.fill(tolerances, distanceTolerance);
-                    CoverageSimplifier simplifier = new CoverageSimplifier(polygons.toArray(new Geometry[0]));
-                    Geometry[] simplifiedPolygons = simplifier.simplify(tolerances);
+            if (polygons.size() > 1) {
+                List<Geometry> simplifiedPolygons = simplifyCoverageInBatches(polygons, distanceTolerance, usedFallback);
 
-                    List<Geometry> result = new ArrayList<>(geoms);
-                    for (int i = 0; i < polygonIndices.size(); i++) {
-                        result.set(polygonIndices.get(i), simplifiedPolygons[i]);
-                    }
-                    for (int i = 0; i < geoms.size(); i++) {
-                        if (!(geoms.get(i) instanceof org.locationtech.jts.geom.Polygonal)) {
-                            double tol = distanceTolerance > 0 ? distanceTolerance : getDistanceTolerance(geoms.get(i));
-                            result.set(i, TopologyPreservingSimplifier.simplify(geoms.get(i), tol));
-                        }
-                    }
-                    return result;
-                } catch (Throwable e) {
-                    if (usedFallback != null && usedFallback.length > 0) {
-                        usedFallback[0] = true;
-                    }
-                    System.err.println("Warning: CoverageSimplifier failed (" + e.getClass().getSimpleName() + "), falling back to individual simplification.");
+                List<Geometry> result = new ArrayList<>(geoms);
+                for (int i = 0; i < polygonIndices.size(); i++) {
+                    result.set(polygonIndices.get(i), simplifiedPolygons.get(i));
                 }
-            } else if (polygons.size() > 2500) {
-                if (usedFallback != null && usedFallback.length > 0) {
-                    usedFallback[0] = true;
+                for (int i = 0; i < geoms.size(); i++) {
+                    if (!(geoms.get(i) instanceof org.locationtech.jts.geom.Polygonal)) {
+                        double tol = distanceTolerance > 0 ? distanceTolerance : getDistanceTolerance(geoms.get(i));
+                        result.set(i, TopologyPreservingSimplifier.simplify(geoms.get(i), tol));
+                    }
                 }
-                System.out.printf(Locale.ROOT, "  [Info] Group has %,d polygons (> 2,500). Using individual topology-preserving simplification to prevent OutOfMemoryError.\n", polygons.size());
+                return result;
             }
         }
 
@@ -303,6 +287,36 @@ public class GeoJSONSimplify {
             result.add(TopologyPreservingSimplifier.simplify(g, tol));
         }
         return result;
+    }
+
+    private List<Geometry> simplifyCoverageInBatches(List<Geometry> polygons, double distanceTolerance, boolean[] usedFallback) {
+        int batchSize = 1000;
+        int total = polygons.size();
+        Geometry[] result = new Geometry[total];
+
+        for (int i = 0; i < total; i += batchSize) {
+            int end = Math.min(i + batchSize, total);
+            List<Geometry> batch = polygons.subList(i, end);
+            try {
+                double[] tolerances = new double[batch.size()];
+                Arrays.fill(tolerances, distanceTolerance);
+                CoverageSimplifier simplifier = new CoverageSimplifier(batch.toArray(new Geometry[0]));
+                Geometry[] simplifiedBatch = simplifier.simplify(tolerances);
+                for (int j = 0; j < batch.size(); j++) {
+                    result[i + j] = simplifiedBatch[j];
+                }
+            } catch (Throwable e) {
+                if (usedFallback != null && usedFallback.length > 0) {
+                    usedFallback[0] = true;
+                }
+                System.err.println("Warning: CoverageSimplifier failed on batch (" + e.getClass().getSimpleName() + "), falling back to individual simplification.");
+                for (int j = 0; j < batch.size(); j++) {
+                    double tol = distanceTolerance > 0 ? distanceTolerance : getDistanceTolerance(batch.get(j));
+                    result[i + j] = TopologyPreservingSimplifier.simplify(batch.get(j), tol);
+                }
+            }
+        }
+        return Arrays.asList(result);
     }
 
     private List<Geometry> bufferGroup(String groupName, List<Geometry> geometries, double bufferDistance) {
