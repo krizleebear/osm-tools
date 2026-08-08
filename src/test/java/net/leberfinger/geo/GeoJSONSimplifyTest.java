@@ -189,4 +189,28 @@ class GeoJSONSimplifyTest {
         Files.deleteIfExists(inputGeojson);
         Files.deleteIfExists(tempDir);
     }
+
+    /**
+     * Verifies that GeoJSONSimplifyVerifier correctly validates spatial consistency,
+     * feature count, geometry validity, and tag continuity on simplified outputs.
+     */
+    @Test
+    void verifierConsistencyTest() throws Exception {
+        Path inFile = Paths.get(TEST_RESOURCES_DIR, "frenchTestHierarchy.geojsonseq");
+        GeoJSONSimplify s = new GeoJSONSimplify();
+        Path destFile = s.process(inFile, 0.001, 0.005, true);
+
+        GeoJSONSimplifyVerifier.VerificationResult result = GeoJSONSimplifyVerifier.verify(inFile, destFile);
+        result.printSummary();
+
+        assertTrue(result.isSuccess(), "Simplification verification should pass all spatial consistency checks");
+        assertEquals(7, result.totalInputFeatures);
+        assertEquals(7, result.totalOutputFeatures);
+        assertEquals(0, result.invalidGeometriesCount);
+        assertEquals(0, result.tagContinuityMismatches);
+        assertEquals(0, result.coverageFailures);
+        assertEquals(0, result.inlandOverlapViolations);
+
+        Files.deleteIfExists(destFile);
+    }
 }

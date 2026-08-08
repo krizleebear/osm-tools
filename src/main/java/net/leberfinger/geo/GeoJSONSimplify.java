@@ -172,6 +172,13 @@ public class GeoJSONSimplify {
         printExecutionSummary(inFile.getFileName().toString(), totalFeatures, polygonalFeatures, nonPolygonalFeatures,
                 groups, coverageSuccessGroups, coverageFallbackGroups, bufferDistance, sizeBefore, sizeAfter, spaceSavedPercent);
 
+        try {
+            GeoJSONSimplifyVerifier.VerificationResult vResult = GeoJSONSimplifyVerifier.verify(inFile, destFile);
+            vResult.printSummary();
+        } catch (Exception e) {
+            System.err.println("Warning: Consistency verification failed with error: " + e.getMessage());
+        }
+
         return destFile;
     }
 
