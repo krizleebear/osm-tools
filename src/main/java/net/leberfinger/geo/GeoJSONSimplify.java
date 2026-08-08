@@ -180,12 +180,12 @@ public class GeoJSONSimplify {
         System.out.println("============================================================");
         System.out.println(" GeoJSONSimplify Execution Summary");
         System.out.println(" File:               " + filename);
-        System.out.println(" Total Features:     " + String.format("%,d", totalFeatures) +
-                String.format(" (%,d Polygonal, %,d Non-Polygonal)", polygonalFeatures, nonPolygonalFeatures));
+        System.out.println(" Total Features:     " + String.format(java.util.Locale.ROOT, "%,d", totalFeatures) +
+                String.format(java.util.Locale.ROOT, " (%,d Polygonal, %,d Non-Polygonal)", polygonalFeatures, nonPolygonalFeatures));
         System.out.println(" Hierarchy Groups:   " + groups.size() + " (" + groupStr + ")");
         System.out.println(" Simplification:     Coverage Mode (" + coverageSuccess + " succeeded, " + coverageFallback + " fallbacks)");
-        System.out.println(" Coastal Buffer:     " + (bufferDistance > 0 ? String.format("%.4f degrees (~%.1f km)", bufferDistance, bufferDistance * 111.0) : "Disabled"));
-        System.out.println(" File Size:          " + String.format("%,d -> %,d bytes (%.1f%% saved)", sizeBefore, sizeAfter, spaceSavedPercent));
+        System.out.println(" Coastal Buffer:     " + (bufferDistance > 0 ? String.format(java.util.Locale.ROOT, "%.4f degrees (~%.1f km)", bufferDistance, bufferDistance * 111.0) : "Disabled"));
+        System.out.println(" File Size:          " + String.format(java.util.Locale.ROOT, "%,d -> %,d bytes (%.1f%% saved)", sizeBefore, sizeAfter, spaceSavedPercent));
         System.out.println("============================================================");
     }
 

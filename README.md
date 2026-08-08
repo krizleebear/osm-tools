@@ -15,3 +15,6 @@ Classes to connect to Nominatim and perform reverse geo coding queries. Offers c
 
 ## [Geofabrik downloads](../../tree/master/src/main/java/net/leberfinger/osm/geofabrik)
 List of download URLs for data extracts offered by Geofabrik. 
+
+## [Agent & Contribution Guidelines](AGENTS.md)
+Guidelines for AI agents and developers working on this repository, covering Docker verification, conventional commits, and spatial coding invariants (`Locale.ROOT`, tag continuity, coastal buffering). 
