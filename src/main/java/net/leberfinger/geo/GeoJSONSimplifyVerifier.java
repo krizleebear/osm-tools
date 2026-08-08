@@ -109,13 +109,24 @@ public class GeoJSONSimplifyVerifier {
                 double inArea = in.geometry.getArea();
                 if (inArea > 0) {
                     try {
-                        Geometry intersection = in.geometry.intersection(out.geometry);
-                        double overlapPercent = (intersection.getArea() / inArea) * 100.0;
-                        totalOverlapPercentSum += Math.min(100.0, overlapPercent);
-                        validOverlapCount++;
+                        Geometry intersection = null;
+                        try {
+                            intersection = in.geometry.intersection(out.geometry);
+                        } catch (Exception e) {
+                            try {
+                                intersection = in.geometry.buffer(0).intersection(out.geometry.buffer(0));
+                            } catch (Exception ex) {
+                                intersection = null;
+                            }
+                        }
+                        if (intersection != null) {
+                            double overlapPercent = (intersection.getArea() / inArea) * 100.0;
+                            totalOverlapPercentSum += Math.min(100.0, overlapPercent);
+                            validOverlapCount++;
 
-                        if (overlapPercent < 95.0) {
-                            result.coverageFailures++;
+                            if (overlapPercent < 95.0) {
+                                result.coverageFailures++;
+                            }
                         }
                     } catch (Exception e) {
                         result.coverageFailures++;
@@ -151,6 +162,13 @@ public class GeoJSONSimplifyVerifier {
     }
 
     private static int checkInlandOverlaps(List<GeoJSON> inputFeatures, List<GeoJSON> outputFeatures) {
+        Map<String, GeoJSON> outputMap = new HashMap<>();
+        for (int i = 0; i < outputFeatures.size(); i++) {
+            GeoJSON out = outputFeatures.get(i);
+            String key = getFeatureKey(out, i);
+            outputMap.putIfAbsent(key, out);
+        }
+
         Map<String, List<Integer>> groupedIndices = new LinkedHashMap<>();
         for (int i = 0; i < inputFeatures.size(); i++) {
             GeoJSON f = inputFeatures.get(i);
@@ -171,9 +189,12 @@ public class GeoJSONSimplifyVerifier {
             }
 
             for (int idx1 : indices) {
-                Geometry outGeom = outputFeatures.get(idx1).geometry;
-                Geometry inGeom1 = inputFeatures.get(idx1).geometry;
-                if (outGeom == null || inGeom1 == null) continue;
+                GeoJSON in1 = inputFeatures.get(idx1);
+                String key1 = getFeatureKey(in1, idx1);
+                GeoJSON out1 = outputMap.get(key1);
+                if (out1 == null || out1.geometry == null || in1.geometry == null) continue;
+                Geometry outGeom = out1.geometry;
+                Geometry inGeom1 = in1.geometry;
 
                 @SuppressWarnings("unchecked")
                 List<Integer> candidateIndices = inputIndex.query(outGeom.getEnvelopeInternal());
@@ -183,16 +204,32 @@ public class GeoJSONSimplifyVerifier {
                     if (inGeom2 == null) continue;
 
                     // If original input neighbor 2 shares border with input 1 (no initial area overlap):
-                    double origOverlap = inGeom1.intersects(inGeom2) ? inGeom1.intersection(inGeom2).getArea() : 0.0;
+                    double origOverlap = 0.0;
+                    try {
+                        origOverlap = inGeom1.intersects(inGeom2) ? inGeom1.intersection(inGeom2).getArea() : 0.0;
+                    } catch (Exception e) {
+                        try {
+                            origOverlap = inGeom1.buffer(0).intersects(inGeom2.buffer(0))
+                                    ? inGeom1.buffer(0).intersection(inGeom2.buffer(0)).getArea() : 0.0;
+                        } catch (Exception ex) {
+                            origOverlap = 0.0;
+                        }
+                    }
                     if (origOverlap < 1e-6) {
                         try {
                             Geometry intrusion = outGeom.intersection(inGeom2);
-                            // Flag intrusion if buffered polygon significantly intrudes into inland neighbor (> 0.001 deg2 ~ 1 km2)
                             if (intrusion != null && !intrusion.isEmpty() && intrusion.getArea() > 1e-3) {
                                 violations++;
                             }
                         } catch (Exception e) {
-                            // ignore topology exception
+                            try {
+                                Geometry intrusion = outGeom.buffer(0).intersection(inGeom2.buffer(0));
+                                if (intrusion != null && !intrusion.isEmpty() && intrusion.getArea() > 1e-3) {
+                                    violations++;
+                                }
+                            } catch (Exception ex) {
+                                // ignore topology exception
+                            }
                         }
                     }
                 }

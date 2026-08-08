@@ -321,60 +321,63 @@ public class GeoJSONSimplify {
             index.insert(g.getEnvelopeInternal(), g);
         }
 
+        List<Geometry> bufferedResult = new ArrayList<>();
         int total = geometries.size();
-        Geometry[] bufferedArray = new Geometry[total];
-        java.util.concurrent.atomic.AtomicInteger completed = new java.util.concurrent.atomic.AtomicInteger(0);
+        long lastLogTime = System.currentTimeMillis();
 
-        java.util.stream.IntStream.range(0, total).parallel().forEach(i -> {
+        for (int i = 0; i < total; i++) {
             Geometry geom = geometries.get(i);
 
-            if (!(geom instanceof org.locationtech.jts.geom.Polygonal) || geom.isEmpty()) {
-                bufferedArray[i] = geom;
-            } else {
-                Geometry buffered = geom.buffer(bufferDistance);
-
-                @SuppressWarnings("unchecked")
-                List<Geometry> candidates = index.query(buffered.getEnvelopeInternal());
-                List<Geometry> polygonalCandidates = new ArrayList<>();
-                for (Geometry neighbor : candidates) {
-                    if (neighbor instanceof org.locationtech.jts.geom.Polygonal && !neighbor.isEmpty()) {
-                        polygonalCandidates.add(neighbor);
-                    }
-                }
-
-                if (!polygonalCandidates.isEmpty()) {
-                    try {
-                        // Perform local union of candidate neighbors for instant difference calculation
-                        Geometry localLandmass = org.locationtech.jts.operation.union.UnaryUnionOp.union(polygonalCandidates);
-                        if (localLandmass.covers(buffered)) {
-                            // Entirely inland feature: buffer is 100% covered by local landmass, inland borders untouched
-                            bufferedArray[i] = geom;
-                        } else {
-                            Geometry oceanExtension = buffered.difference(localLandmass);
-                            if (oceanExtension.isEmpty()) {
-                                bufferedArray[i] = geom;
-                            } else {
-                                // Extend coastal border into ocean space while keeping inland borders untouched
-                                bufferedArray[i] = geom.union(oceanExtension);
-                            }
-                        }
-                    } catch (Exception e) {
-                        bufferedArray[i] = buffered;
-                    }
-                } else {
-                    bufferedArray[i] = buffered;
-                }
-            }
-
-            int current = completed.incrementAndGet();
-            if (current % 2000 == 0 || current == total) {
+            if ((i + 1) % 2000 == 0 || (System.currentTimeMillis() - lastLogTime > 5000)) {
                 System.out.printf(Locale.ROOT, "  [%s] Buffering progress: %,d/%,d features (%.1f%%)\n",
-                        groupName, current, total, (double) current / total * 100);
+                        groupName, i + 1, total, (double) (i + 1) / total * 100);
                 System.out.flush();
+                lastLogTime = System.currentTimeMillis();
             }
-        });
 
-        return Arrays.asList(bufferedArray);
+            if (!(geom instanceof org.locationtech.jts.geom.Polygonal) || geom.isEmpty()) {
+                bufferedResult.add(geom);
+                continue;
+            }
+
+            Geometry buffered = geom.buffer(bufferDistance);
+
+            @SuppressWarnings("unchecked")
+            List<Geometry> candidates = index.query(buffered.getEnvelopeInternal());
+            List<Geometry> polygonalCandidates = new ArrayList<>();
+            for (Geometry neighbor : candidates) {
+                if (neighbor instanceof org.locationtech.jts.geom.Polygonal && !neighbor.isEmpty()) {
+                    polygonalCandidates.add(neighbor);
+                }
+            }
+
+            if (!polygonalCandidates.isEmpty()) {
+                try {
+                    // Perform local union of candidate neighbors for instant difference calculation
+                    Geometry localLandmass = org.locationtech.jts.operation.union.UnaryUnionOp.union(polygonalCandidates);
+                    if (localLandmass.covers(buffered)) {
+                        // Entirely inland feature: buffer is 100% covered by local landmass, inland borders untouched
+                        bufferedResult.add(geom);
+                        continue;
+                    }
+                    Geometry oceanExtension = buffered.difference(localLandmass);
+                    if (oceanExtension.isEmpty()) {
+                        bufferedResult.add(geom);
+                        continue;
+                    }
+                    // Extend coastal border into ocean space while keeping inland borders untouched
+                    bufferedResult.add(geom.union(oceanExtension));
+                    continue;
+                } catch (Exception e) {
+                    bufferedResult.add(buffered);
+                    continue;
+                }
+            } else {
+                bufferedResult.add(buffered);
+            }
+        }
+
+        return bufferedResult;
     }
 
     protected String getHierarchyGroupKey(JsonObject json) {
