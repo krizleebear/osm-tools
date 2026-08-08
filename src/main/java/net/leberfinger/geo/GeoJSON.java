@@ -56,4 +56,11 @@ public class GeoJSON {
 
         return copy;
     }
+
+    public static java.util.stream.Stream<GeoJSON> streamParsedGeoJSONLines(java.nio.file.Path inFile) throws java.io.IOException {
+        return java.nio.file.Files.lines(inFile)
+                .map(parser::parse)
+                .map(com.google.gson.JsonElement::getAsJsonObject)
+                .map(GeoJSON::fromJSON);
+    }
 }

@@ -76,7 +76,7 @@ public class CategoryImport {
 	protected static Set<String> listBundledFiles()
 	{
 		String packageName = CategoryImport.class.getPackage().getName();
-		Reflections reflections = new Reflections(packageName, new ResourcesScanner());
+		Reflections reflections = new Reflections(packageName, org.reflections.scanners.Scanners.Resources);
 		return reflections.getResources(Pattern.compile(".*\\.tsv"));
 	}
 
