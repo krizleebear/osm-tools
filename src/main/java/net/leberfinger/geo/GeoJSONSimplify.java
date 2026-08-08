@@ -156,10 +156,15 @@ public class GeoJSONSimplify {
 
                 for (int i = 0; i < group.size(); i++) {
                     GeoJSON original = group.get(i);
-                    GeoJSON processed = new GeoJSON(bufferedGeometries.get(i), original.properties);
+                    Geometry finalGeom = bufferedGeometries.get(i);
+                    if (finalGeom != null && !finalGeom.isValid()) {
+                        finalGeom = finalGeom.buffer(0);
+                    }
+                    GeoJSON processed = new GeoJSON(finalGeom, original.properties);
                     bw.write(processed.toJSON().toString());
                     bw.write('\n');
                 }
+
                 bw.flush();
             }
         }
