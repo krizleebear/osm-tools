@@ -32,6 +32,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Properties;
 import java.util.stream.Stream;
 
 public class GeoJSONSimplify {
@@ -191,6 +192,7 @@ public class GeoJSONSimplify {
 
         System.out.println("============================================================");
         System.out.println(" GeoJSONSimplify Execution Summary");
+        System.out.println(" Commit / Build:     " + getGitCommitInfo());
         System.out.println(" File:               " + filename);
         System.out.println(" Total Features:     " + String.format(Locale.ROOT, "%,d", totalFeatures) +
                 String.format(Locale.ROOT, " (%,d Polygonal, %,d Non-Polygonal)", polygonalFeatures, nonPolygonalFeatures));
@@ -199,6 +201,29 @@ public class GeoJSONSimplify {
         System.out.println(" Coastal Buffer:     " + (bufferDistance > 0 ? String.format(Locale.ROOT, "%.4f degrees (~%.1f km)", bufferDistance, bufferDistance * 111.0) : "Disabled"));
         System.out.println(" File Size:          " + String.format(Locale.ROOT, "%,d -> %,d bytes (%.1f%% saved)", sizeBefore, sizeAfter, spaceSavedPercent));
         System.out.println("============================================================");
+    }
+
+    private String getGitCommitInfo() {
+        String commit = System.getenv("BUILD_SOURCEVERSION");
+        if (commit == null || commit.isEmpty()) {
+            commit = System.getenv("GIT_COMMIT");
+        }
+        String buildTime = "";
+        try (java.io.InputStream is = getClass().getResourceAsStream("/git.properties")) {
+            if (is != null) {
+                Properties props = new Properties();
+                props.load(is);
+                if (commit == null || commit.isEmpty()) {
+                    commit = props.getProperty("git.commit.id.abbrev", "");
+                }
+                buildTime = props.getProperty("git.build.time", "");
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        if (commit == null || commit.isEmpty()) commit = "dev";
+        if (commit.length() > 8) commit = commit.substring(0, 8);
+        return buildTime.isEmpty() ? commit : commit + " (" + buildTime + ")";
     }
 
     private List<Geometry> simplifyGroup(List<GeoJSON> group, double distanceTolerance, boolean useCoverage, boolean[] usedFallback) {
