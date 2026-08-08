@@ -315,85 +315,66 @@ public class GeoJSONSimplify {
             return geometries;
         }
 
-        // Spatial index for fast local neighbor query
+        // Spatial index for fast local neighbor query (STRtree query is thread-safe for parallel reads)
         STRtree index = new STRtree();
         for (Geometry g : validPolygons) {
             index.insert(g.getEnvelopeInternal(), g);
         }
 
-        List<Geometry> bufferedResult = new ArrayList<>();
         int total = geometries.size();
-        long lastLogTime = System.currentTimeMillis();
+        Geometry[] bufferedArray = new Geometry[total];
+        java.util.concurrent.atomic.AtomicInteger completed = new java.util.concurrent.atomic.AtomicInteger(0);
 
-        for (int i = 0; i < total; i++) {
+        java.util.stream.IntStream.range(0, total).parallel().forEach(i -> {
             Geometry geom = geometries.get(i);
 
-            if ((i + 1) % 1000 == 0 || (System.currentTimeMillis() - lastLogTime > 3000)) {
-                System.out.printf(Locale.ROOT, "  [%s] Buffering progress: %,d/%,d features (%.1f%%)\n",
-                        groupName, i + 1, total, (double) (i + 1) / total * 100);
-                lastLogTime = System.currentTimeMillis();
-            }
-
             if (!(geom instanceof org.locationtech.jts.geom.Polygonal) || geom.isEmpty()) {
-                bufferedResult.add(geom);
-                continue;
-            }
+                bufferedArray[i] = geom;
+            } else {
+                Geometry buffered = geom.buffer(bufferDistance);
 
-            Geometry buffered = geom.buffer(bufferDistance);
-
-            @SuppressWarnings("unchecked")
-            List<Geometry> candidates = index.query(buffered.getEnvelopeInternal());
-            List<Geometry> polygonalCandidates = new ArrayList<>();
-            for (Geometry neighbor : candidates) {
-                if (neighbor instanceof org.locationtech.jts.geom.Polygonal && !neighbor.isEmpty()) {
-                    polygonalCandidates.add(neighbor);
-                }
-            }
-
-            if (!polygonalCandidates.isEmpty()) {
-                try {
-                    // Perform local union of candidate neighbors for instant difference calculation
-                    Geometry localLandmass = org.locationtech.jts.operation.union.UnaryUnionOp.union(polygonalCandidates);
-                    if (localLandmass.covers(buffered)) {
-                        // Entirely inland feature: buffer is 100% covered by local landmass, inland borders untouched
-                        bufferedResult.add(geom);
-                        continue;
+                @SuppressWarnings("unchecked")
+                List<Geometry> candidates = index.query(buffered.getEnvelopeInternal());
+                List<Geometry> polygonalCandidates = new ArrayList<>();
+                for (Geometry neighbor : candidates) {
+                    if (neighbor instanceof org.locationtech.jts.geom.Polygonal && !neighbor.isEmpty()) {
+                        polygonalCandidates.add(neighbor);
                     }
-                    Geometry oceanExtension = buffered.difference(localLandmass);
-                    if (oceanExtension.isEmpty()) {
-                        bufferedResult.add(geom);
-                        continue;
-                    }
-                    // Extend coastal border into ocean space while keeping inland borders untouched
-                    Geometry finalGeom = geom.union(oceanExtension);
-                    bufferedResult.add(finalGeom);
-                    continue;
-                } catch (Exception e) {
-                    // Fallback to spatial index neighbor subtraction if difference fails
                 }
-            }
 
-            // Fallback: Individual neighbor subtraction using spatial index
-            for (Geometry neighbor : polygonalCandidates) {
-                if (neighbor == geom) {
-                    continue;
-                }
-                if (buffered.getEnvelopeInternal().intersects(neighbor.getEnvelopeInternal())
-                        && buffered.intersects(neighbor)) {
+                if (!polygonalCandidates.isEmpty()) {
                     try {
-                        buffered = buffered.difference(neighbor);
-                    } catch (Exception e) {
-                        try {
-                            buffered = buffered.buffer(0).difference(neighbor.buffer(0));
-                        } catch (Exception ex) {
-                            // ignore if subtraction fails
+                        // Perform local union of candidate neighbors for instant difference calculation
+                        Geometry localLandmass = org.locationtech.jts.operation.union.UnaryUnionOp.union(polygonalCandidates);
+                        if (localLandmass.covers(buffered)) {
+                            // Entirely inland feature: buffer is 100% covered by local landmass, inland borders untouched
+                            bufferedArray[i] = geom;
+                        } else {
+                            Geometry oceanExtension = buffered.difference(localLandmass);
+                            if (oceanExtension.isEmpty()) {
+                                bufferedArray[i] = geom;
+                            } else {
+                                // Extend coastal border into ocean space while keeping inland borders untouched
+                                bufferedArray[i] = geom.union(oceanExtension);
+                            }
                         }
+                    } catch (Exception e) {
+                        bufferedArray[i] = buffered;
                     }
+                } else {
+                    bufferedArray[i] = buffered;
                 }
             }
-            bufferedResult.add(buffered);
-        }
-        return bufferedResult;
+
+            int current = completed.incrementAndGet();
+            if (current % 2000 == 0 || current == total) {
+                System.out.printf(Locale.ROOT, "  [%s] Buffering progress: %,d/%,d features (%.1f%%)\n",
+                        groupName, current, total, (double) current / total * 100);
+                System.out.flush();
+            }
+        });
+
+        return Arrays.asList(bufferedArray);
     }
 
     protected String getHierarchyGroupKey(JsonObject json) {
