@@ -174,8 +174,21 @@ public class GeoJSONSimplify {
         try {
             GeoJSONSimplifyVerifier.VerificationResult vResult = GeoJSONSimplifyVerifier.verify(inFile, destFile);
             vResult.printSummary();
+
+            if (vResult.totalInputFeatures != vResult.totalOutputFeatures) {
+                throw new IllegalStateException("CRITICAL VERIFICATION ERROR: Feature count mismatch (input: " + vResult.totalInputFeatures + ", output: " + vResult.totalOutputFeatures + "). Aborting pipeline.");
+            }
+            if (vResult.tagContinuityMismatches > 0) {
+                throw new IllegalStateException("CRITICAL VERIFICATION ERROR: " + vResult.tagContinuityMismatches + " tag continuity mismatches detected. Aborting pipeline.");
+            }
+            if (vResult.inlandOverlapViolations > 0) {
+                throw new IllegalStateException("CRITICAL VERIFICATION ERROR: " + vResult.inlandOverlapViolations + " inland non-overlap violations detected. Aborting pipeline.");
+            }
+        } catch (IllegalStateException e) {
+            System.err.println("Pipeline Execution Aborted: " + e.getMessage());
+            throw e;
         } catch (Exception e) {
-            System.err.println("Warning: Consistency verification failed with error: " + e.getMessage());
+            System.err.println("Warning: Consistency verification encountered non-fatal error: " + e.getMessage());
         }
 
         return destFile;
