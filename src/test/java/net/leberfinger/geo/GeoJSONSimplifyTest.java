@@ -149,6 +149,7 @@ class GeoJSONSimplifyTest {
         assertTrue(inlandIntrusion.getArea() < 1e-6, "Buffered coastal polygon should not intrude into neighboring inland municipality");
 
         // Cleanup
+        Files.deleteIfExists(tempDir.resolve("coastal_test.simplified.geojsonseq.html"));
         Files.deleteIfExists(simplifiedFile);
         Files.deleteIfExists(inputGeojson);
         Files.deleteIfExists(tempDir);
@@ -185,6 +186,7 @@ class GeoJSONSimplifyTest {
         // Verify the Point feature was preserved without crashing CoverageSimplifier
         assertTrue(simplifiedFeatures.get(2).geometry instanceof org.locationtech.jts.geom.Point);
 
+        Files.deleteIfExists(tempDir.resolve("mixed_test.simplified.geojsonseq.html"));
         Files.deleteIfExists(simplifiedFile);
         Files.deleteIfExists(inputGeojson);
         Files.deleteIfExists(tempDir);
@@ -212,5 +214,19 @@ class GeoJSONSimplifyTest {
         assertEquals(0, result.inlandOverlapViolations);
 
         Files.deleteIfExists(destFile);
+    }
+
+    /**
+     * Verifies that the generic HTML map viewer doc/map_viewer.html exists and is valid.
+     */
+    @Test
+    void mapViewerGeneratorTest() throws Exception {
+        Path htmlFile = Paths.get("doc", "map_viewer.html");
+        assertTrue(Files.exists(htmlFile));
+        assertTrue(Files.size(htmlFile) > 0);
+
+        String content = new String(Files.readAllBytes(htmlFile), java.nio.charset.StandardCharsets.UTF_8);
+        assertTrue(content.contains("GeoJSON & GeoJSONSeq Map Viewer"));
+        assertTrue(content.contains("leaflet.js"));
     }
 }

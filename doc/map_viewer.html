@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoJSON & GeoJSONSeq Interactive Map Viewer</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --panel-bg: rgba(30, 41, 59, 0.85);
+            --panel-border: rgba(255, 255, 255, 0.12);
+            --accent-input: #00f2fe;
+            --accent-output: #10b981;
+            --accent-diff: #f59e0b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background: var(--bg-dark); color: var(--text-main); }
+        #map { width: 100%; height: 100%; background: #0b0f19; }
+        
+        .glass-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+        }
+        .header-card {
+            position: absolute; top: 16px; left: 16px; padding: 16px 20px;
+            max-width: 440px; pointer-events: auto;
+        }
+        .header-title {
+            font-size: 1.1rem; font-weight: 700; color: #fff;
+            display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+        }
+        .header-subtitle { font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; }
+        
+        .controls-card {
+            position: absolute; top: 16px; right: 16px; padding: 16px;
+            width: 360px; max-height: calc(100vh - 32px); overflow-y: auto;
+        }
+        .section-title {
+            font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.05em; color: var(--text-muted); margin: 12px 0 6px 0;
+        }
+        .section-title:first-child { margin-top: 0; }
+        
+        .btn-group { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+        .btn {
+            background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-main); padding: 6px 12px; font-size: 0.78rem; font-weight: 500;
+            border-radius: 6px; cursor: pointer; transition: all 0.2s ease;
+        }
+        .btn:hover { background: rgba(255, 255, 255, 0.15); border-color: rgba(255, 255, 255, 0.3); }
+        .btn.active { background: rgba(16, 185, 129, 0.25); border-color: #10b981; color: #34d399; font-weight: 600; }
+        .btn-cyan.active { background: rgba(0, 242, 254, 0.25); border-color: #00f2fe; color: #38bdf8; }
+        .btn-amber.active { background: rgba(245, 158, 11, 0.25); border-color: #f59e0b; color: #fbbf24; }
+        
+        .search-input {
+            width: 100%; padding: 8px 12px; font-size: 0.8rem; border-radius: 6px;
+            background: rgba(0,0,0,0.3); border: 1px solid var(--panel-border);
+            color: #fff; outline: none; margin-bottom: 10px;
+        }
+        .search-input:focus { border-color: #38bdf8; }
+        
+        .stats-badge {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 12px; background: rgba(0,0,0,0.25); border-radius: 6px;
+            font-size: 0.78rem; margin-bottom: 6px;
+        }
+        .stats-label { color: var(--text-muted); }
+        .stats-val { font-weight: 600; color: #fff; }
+        
+        .file-status {
+            display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px;
+        }
+        .file-pill {
+            padding: 8px 10px; border-radius: 6px; font-size: 0.75rem;
+            background: rgba(0,0,0,0.25); border: 1px solid var(--panel-border);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .file-pill.input { border-color: rgba(0, 242, 254, 0.4); color: #38bdf8; }
+        .file-pill.output { border-color: rgba(16, 185, 129, 0.4); color: #34d399; }
+        
+        /* Fullscreen Drag Overlay */
+        #drag-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(16px);
+            z-index: 9999; display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            border: 4px dashed #38bdf8; opacity: 0; pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+        body.dragging #drag-overlay { opacity: 1; pointer-events: auto; }
+        .drag-msg { font-size: 1.5rem; font-weight: 700; color: #fff; margin-top: 16px; }
+        .drag-sub { font-size: 0.9rem; color: var(--text-muted); margin-top: 8px; }
+        
+        .leaflet-container { background: #0b0f19 !important; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    
+    <div id="drag-overlay">
+        <div style="font-size: 3rem;">📥</div>
+        <div class="drag-msg">Drop GeoJSON or GeoJSONSeq files here</div>
+        <div class="drag-sub">Drop 1 or 2 files — Original vs Simplified will be auto-detected!</div>
+    </div>
+    
+    <div class="glass-panel header-card">
+        <div class="header-title">🗺️ GeoJSON & GeoJSONSeq Map Viewer</div>
+        <div class="header-subtitle" id="header-filename">Drag & drop files anywhere onto the map or screen</div>
+    </div>
+    
+    <div class="glass-panel controls-card">
+        <div class="section-title">Loaded Datasets</div>
+        <div class="file-status">
+            <div class="file-pill input" id="pill-in">
+                <span>📥 Input: None</span>
+                <span id="count-in">0</span>
+            </div>
+            <div class="file-pill output" id="pill-out">
+                <span>📤 Output: None</span>
+                <span id="count-out">0</span>
+            </div>
+        </div>
+        <button class="btn" style="width: 100%; margin-bottom: 10px;" onclick="document.getElementById('file-input-btn').click()">
+            📂 Browse Files...
+        </button>
+        <input type="file" id="file-input-btn" multiple style="display:none" onchange="handleFileSelect(event)">
+        
+        <div class="section-title">Layer Toggle</div>
+        <div class="btn-group">
+            <button class="btn btn-cyan active" id="btn-mode-input" onclick="setMode('input')">Input (Original)</button>
+            <button class="btn active" id="btn-mode-output" onclick="setMode('output')">Output (Simplified)</button>
+            <button class="btn btn-amber active" id="btn-mode-diff" onclick="setMode('diff')">Diff / Buffer</button>
+        </div>
+        
+        <div class="section-title">Admin Level Drill-Down</div>
+        <div class="btn-group" id="admin-level-buttons">
+            <button class="btn active" onclick="filterAdminLevel('ALL')">ALL</button>
+        </div>
+        
+        <div class="section-title">Feature Search</div>
+        <input type="text" class="search-input" id="search-input" placeholder="Search name or @id..." oninput="onSearch(this.value)">
+        
+        <div class="section-title">Performance Guard</div>
+        <div class="stats-badge">
+            <span class="stats-label">Max Render Cap:</span>
+            <span class="stats-val" id="cap-label">300 features</span>
+        </div>
+        <div class="stats-badge">
+            <span class="stats-label">Rendered Features:</span>
+            <span class="stats-val" id="rendered-count">0 / 0</span>
+        </div>
+        <div class="btn-group" style="margin-top: 4px;">
+            <button class="btn" onclick="setCap(100)">100</button>
+            <button class="btn active" onclick="setCap(300)">300</button>
+            <button class="btn" onclick="setCap(1000)">1000</button>
+            <button class="btn" onclick="setCap(99999)">UNLIMITED</button>
+        </div>
+    </div>
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let inputData = [];
+        let outputData = [];
+        
+        let map = L.map('map', { renderer: L.canvas() }).setView([51.1657, 10.4515], 6);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap &copy; CARTO',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(map);
+        
+        let showInput = true;
+        let showOutput = true;
+        let showDiff = true;
+        let selectedAdminLevel = 'ALL';
+        let searchQuery = '';
+        let maxRenderCap = 300;
+        
+        let inputLayerGroup = L.layerGroup().addTo(map);
+        let outputLayerGroup = L.layerGroup().addTo(map);
+        let diffLayerGroup = L.layerGroup().addTo(map);
+        
+        // Setup Drag & Drop Handlers on Window
+        window.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            document.body.classList.add('dragging');
+        });
+        window.addEventListener('dragleave', function(e) {
+            if (e.clientX === 0 && e.clientY === 0) {
+                document.body.classList.remove('dragging');
+            }
+        });
+        window.addEventListener('drop', function(e) {
+            e.preventDefault();
+            document.body.classList.remove('dragging');
+            
+            const files = Array.from(e.dataTransfer.files);
+            if (files.length === 0) return;
+            processDroppedFiles(files);
+        });
+        
+        function handleFileSelect(e) {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+            processDroppedFiles(files);
+        }
+        
+        function processDroppedFiles(files) {
+            if (files.length === 1) {
+                const f = files[0];
+                const isSimplified = f.name.toLowerCase().includes('simplified');
+                readAndParse(f, isSimplified ? 'output' : 'input');
+            } else if (files.length >= 2) {
+                let f1 = files[0];
+                let f2 = files[1];
+                let inF = f1;
+                let outF = f2;
+                if (f1.name.toLowerCase().includes('simplified') || f1.size < f2.size) {
+                    outF = f1;
+                    inF = f2;
+                }
+                readAndParse(inF, 'input');
+                readAndParse(outF, 'output');
+            }
+        }
+        
+        function readAndParse(file, target) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const features = parseGeoJSONSeq(text);
+                if (target === 'input') {
+                    inputData = features;
+                    document.getElementById('pill-in').querySelector('span').innerText = '📥 Input: ' + file.name;
+                    document.getElementById('count-in').innerText = features.length;
+                } else {
+                    outputData = features;
+                    document.getElementById('pill-out').querySelector('span').innerText = '📤 Output: ' + file.name;
+                    document.getElementById('count-out').innerText = features.length;
+                }
+                document.getElementById('header-filename').innerText = file.name;
+                extractAdminLevels();
+                renderMap();
+            };
+            reader.readAsText(file);
+        }
+        
+        function parseGeoJSONSeq(text) {
+            const lines = text.split(/\r?\n/);
+            const features = [];
+            for (let line of lines) {
+                line = line.trim();
+                if (!line) continue;
+                try {
+                    features.push(JSON.parse(line));
+                } catch(e) {}
+            }
+            return features;
+        }
+        
+        function extractAdminLevels() {
+            const levels = new Set();
+            [...inputData, ...outputData].forEach(f => {
+                const p = f.properties || {};
+                if (p.admin_level) levels.add('L' + p.admin_level);
+                if (p.subtype) levels.add(p.subtype);
+            });
+            const container = document.getElementById('admin-level-buttons');
+            container.innerHTML = '<button class="btn ' + (selectedAdminLevel==='ALL'?'active':'') + '" onclick="filterAdminLevel(\'ALL\')">ALL</button>';
+            Array.from(levels).sort().forEach(lvl => {
+                container.innerHTML += '<button class="btn ' + (selectedAdminLevel===lvl?'active':'') + '" onclick="filterAdminLevel(\'' + lvl + '\')">' + lvl + '</button>';
+            });
+        }
+        
+        function filterAdminLevel(lvl) {
+            selectedAdminLevel = lvl;
+            extractAdminLevels();
+            renderMap();
+        }
+        
+        function setMode(mode) {
+            if (mode === 'input') showInput = !showInput;
+            if (mode === 'output') showOutput = !showOutput;
+            if (mode === 'diff') showDiff = !showDiff;
+            
+            document.getElementById('btn-mode-input').classList.toggle('active', showInput);
+            document.getElementById('btn-mode-output').classList.toggle('active', showOutput);
+            document.getElementById('btn-mode-diff').classList.toggle('active', showDiff);
+            renderMap();
+        }
+        
+        function setCap(cap) {
+            maxRenderCap = cap;
+            document.getElementById('cap-label').innerText = cap >= 99999 ? 'UNLIMITED' : cap + ' features';
+            renderMap();
+        }
+        
+        function onSearch(val) {
+            searchQuery = val.toLowerCase().trim();
+            renderMap();
+        }
+        
+        function featureMatchesFilter(f) {
+            const p = f.properties || {};
+            if (selectedAdminLevel !== 'ALL') {
+                const lvlStr = 'L' + p.admin_level;
+                if (lvlStr !== selectedAdminLevel && p.subtype !== selectedAdminLevel) return false;
+            }
+            if (searchQuery) {
+                const name = (p.name || '').toLowerCase();
+                const id = String(p['@id'] || p.id || '').toLowerCase();
+                if (!name.includes(searchQuery) && !id.includes(searchQuery)) return false;
+            }
+            return true;
+        }
+        
+        function renderMap() {
+            inputLayerGroup.clearLayers();
+            outputLayerGroup.clearLayers();
+            diffLayerGroup.clearLayers();
+            
+            let rendered = 0;
+            let totalEligible = 0;
+            const bounds = L.latLngBounds();
+            
+            const countToRender = Math.max(inputData.length, outputData.length);
+            for (let i = 0; i < countToRender; i++) {
+                const inF = inputData[i];
+                const outF = outputData[i];
+                const sampleF = inF || outF;
+                if (!sampleF || !featureMatchesFilter(sampleF)) continue;
+                
+                totalEligible++;
+                if (rendered >= maxRenderCap) continue;
+                rendered++;
+                
+                if (showInput && inF && inF.geometry) {
+                    const l = L.geoJSON(inF, {
+                        style: { color: '#00f2fe', weight: 2, fillOpacity: 0.15 }
+                    });
+                    inputLayerGroup.addLayer(l);
+                    bounds.extend(l.getBounds());
+                }
+                if (showOutput && outF && outF.geometry) {
+                    const l = L.geoJSON(outF, {
+                        style: { color: '#10b981', weight: 2.5, fillOpacity: 0.25 }
+                    });
+                    outputLayerGroup.addLayer(l);
+                    bounds.extend(l.getBounds());
+                }
+                if (showDiff && outF && outF.geometry) {
+                    const l = L.geoJSON(outF, {
+                        style: { color: '#f59e0b', weight: 1, dashArray: '4,4', fillOpacity: 0.08 }
+                    });
+                    diffLayerGroup.addLayer(l);
+                }
+            }
+            
+            document.getElementById('rendered-count').innerText = rendered + ' / ' + totalEligible;
+            if (rendered > 0 && bounds.isValid()) {
+                map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+            }
+        }
+    </script>
+</body>
+</html>
