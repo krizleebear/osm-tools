@@ -4,7 +4,7 @@ To ensure a consistent development workflow, clean spatial processing, and clear
 
 ---
 
-## 🛠️ Build & Runtime Environment
+## Build & Runtime Environment
 
 - **Direct Host Execution:** If the host system has Java 21+ and Maven installed, commands can be run directly on the host.
 - **Docker Verification:** For clean-room verification or environments lacking a native Maven setup, run tests using Docker:
@@ -15,7 +15,7 @@ To ensure a consistent development workflow, clean spatial processing, and clear
 
 ---
 
-## 🔄 Git & Commit Workflow
+## Git & Commit Workflow
 
 1. **Verify Before Committing:** ALWAYS run the unit test suite (`mvn test` or via Docker) and verify spatial test cases before committing code.
 2. **Conventional Commits Standard:** Use strict commit prefixes:
@@ -27,8 +27,9 @@ To ensure a consistent development workflow, clean spatial processing, and clear
 
 ---
 
-## 💻 Spatial Coding Conventions & Invariants
+## Spatial Coding Conventions & Invariants
 
+- **No Emojis in Documentation:** Avoid using decorative emojis in markdown documentation, section headers, or viewer UIs.
 - **Locale Independence:** When formatting spatial configurations, coordinates, distances, or numbers, ALWAYS format using `Locale.ROOT` in Java (e.g. `String.format(Locale.ROOT, "%.4f", value)`) to prevent comma decimal bugs (`0,01` vs `0.01`) in non-English localizations.
 - **Strict Polygonal Coverage Simplification:** `CoverageSimplifier` strictly requires polygonal geometries. Non-polygonal geometries (`Point`, `LineString`) must be separated and simplified individually to prevent `ClassCastException` failures.
 - **Hierarchy Grouping:** Geometries must be grouped by hierarchy level (`subtype` or `admin_level`) prior to coverage simplification to prevent topological errors between overlapping administrative levels (e.g., states overlapping municipalities).
