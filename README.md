@@ -1,6 +1,9 @@
 # osm-tools [![Build Status](https://travis-ci.org/krizleebear/osm-tools.svg?branch=master)](https://travis-ci.org/krizleebear/osm-tools)
 Java tools to handle OpenStreetMap data. 
 
+## [Geometry Simplification](../../tree/master/src/main/java/net/leberfinger/geo)
+A Java tool to simplify administrative boundary polygons (e.g. using `simplify.sh`) to optimize geocoder index sizes. See [`doc/simplification.md`](doc/simplification.md) for details on the pipeline, the coastal coordinate drop problem, and buffering strategies.
+
 ## [Categories](../../tree/master/src/main/java/net/leberfinger/osm/categories)
 Category names for OSM POI categories (e.g. amenity/restaurant) in several languages.
 

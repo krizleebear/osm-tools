@@ -26,3 +26,17 @@ hs_err_pid*
 /*.geojson
 /*.geojsonseq
 /*.pbf
+
+# IDE & OS specific files
+.idea/
+.settings/
+.classpath
+.project
+.DS_Store
+
+# Local data & temporary test files
+data/
+src/test/resources/*.geojsonseq
+!src/test/resources/polygon-palling.geojsonseq
+!src/test/resources/frenchTestHierarchy.geojsonseq
+!src/test/resources/ingol-divisions.geojsonseq
