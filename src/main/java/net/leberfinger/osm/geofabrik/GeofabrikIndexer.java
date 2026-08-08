@@ -2,6 +2,7 @@ package net.leberfinger.osm.geofabrik;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -75,7 +76,7 @@ public class GeofabrikIndexer {
 	}
 
 	public static DownloadIndex getIndex() throws IOException {
-		URL start = new URL(START_URL);
+		URL start = URI.create(START_URL).toURL();
 		return parse(start);
 	}
 
@@ -100,7 +101,7 @@ public class GeofabrikIndexer {
 			Elements links = element.getElementsByTag("a");
 			for (Element link : links) {
 				String absoluteURL = link.absUrl("href");
-				subRegionURLs.add(new URL(absoluteURL));
+				subRegionURLs.add(URI.create(absoluteURL).toURL());
 			}
 		}
 		return subRegionURLs;
@@ -151,7 +152,7 @@ public class GeofabrikIndexer {
 	
 	public static String getCountryNameFromURL(String url) throws MalformedURLException
 	{
-		return getCountryNameFromURL(new URL(url));
+		return getCountryNameFromURL(URI.create(url).toURL());
 	}
 	
 	public static String getCountryNameFromURL(URL url)

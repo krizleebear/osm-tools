@@ -47,7 +47,7 @@ class GeofabrikIndexerTest {
 	void buildAbsoluteDestination() throws MalformedURLException {
 		Path destFolder = Paths.get("/tmp").toAbsolutePath();
 		String url = "https://download.geofabrik.de/south-america/venezuela-latest.osm.pbf";
-		Path path = GeofabrikIndexer.buildAbsoluteDestination(destFolder, new URL(url));
+		Path path = GeofabrikIndexer.buildAbsoluteDestination(destFolder, java.net.URI.create(url).toURL());
 
 		assertEquals("/tmp/south-america/venezuela-latest.osm.pbf", path.toString());
 	}
