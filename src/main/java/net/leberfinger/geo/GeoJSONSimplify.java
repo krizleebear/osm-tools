@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -128,8 +129,16 @@ public class GeoJSONSimplify {
         int coverageFallbackGroups = 0;
 
         List<GeoJSON> processedFeatures = new ArrayList<>();
+        int groupIndex = 1;
+        int totalGroups = groups.size();
 
-        for (List<GeoJSON> group : groups.values()) {
+        for (Map.Entry<String, List<GeoJSON>> entry : groups.entrySet()) {
+            String groupName = entry.getKey();
+            List<GeoJSON> group = entry.getValue();
+
+            System.out.printf(Locale.ROOT, "[%d/%d] Processing hierarchy group '%s' (%,d features)...\n",
+                    groupIndex++, totalGroups, groupName, group.size());
+
             boolean[] usedFallback = new boolean[]{false};
             List<Geometry> simplifiedGeometries = simplifyGroup(group, distanceTolerance, useCoverage, usedFallback);
             if (useCoverage && group.size() > 1) {
@@ -140,7 +149,7 @@ public class GeoJSONSimplify {
                 }
             }
 
-            List<Geometry> bufferedGeometries = bufferGroup(simplifiedGeometries, bufferDistance);
+            List<Geometry> bufferedGeometries = bufferGroup(groupName, simplifiedGeometries, bufferDistance);
 
             for (int i = 0; i < group.size(); i++) {
                 GeoJSON original = group.get(i);
@@ -180,12 +189,12 @@ public class GeoJSONSimplify {
         System.out.println("============================================================");
         System.out.println(" GeoJSONSimplify Execution Summary");
         System.out.println(" File:               " + filename);
-        System.out.println(" Total Features:     " + String.format(java.util.Locale.ROOT, "%,d", totalFeatures) +
-                String.format(java.util.Locale.ROOT, " (%,d Polygonal, %,d Non-Polygonal)", polygonalFeatures, nonPolygonalFeatures));
+        System.out.println(" Total Features:     " + String.format(Locale.ROOT, "%,d", totalFeatures) +
+                String.format(Locale.ROOT, " (%,d Polygonal, %,d Non-Polygonal)", polygonalFeatures, nonPolygonalFeatures));
         System.out.println(" Hierarchy Groups:   " + groups.size() + " (" + groupStr + ")");
         System.out.println(" Simplification:     Coverage Mode (" + coverageSuccess + " succeeded, " + coverageFallback + " fallbacks)");
-        System.out.println(" Coastal Buffer:     " + (bufferDistance > 0 ? String.format(java.util.Locale.ROOT, "%.4f degrees (~%.1f km)", bufferDistance, bufferDistance * 111.0) : "Disabled"));
-        System.out.println(" File Size:          " + String.format(java.util.Locale.ROOT, "%,d -> %,d bytes (%.1f%% saved)", sizeBefore, sizeAfter, spaceSavedPercent));
+        System.out.println(" Coastal Buffer:     " + (bufferDistance > 0 ? String.format(Locale.ROOT, "%.4f degrees (~%.1f km)", bufferDistance, bufferDistance * 111.0) : "Disabled"));
+        System.out.println(" File Size:          " + String.format(Locale.ROOT, "%,d -> %,d bytes (%.1f%% saved)", sizeBefore, sizeAfter, spaceSavedPercent));
         System.out.println("============================================================");
     }
 
@@ -242,21 +251,41 @@ public class GeoJSONSimplify {
         return result;
     }
 
-    private List<Geometry> bufferGroup(List<Geometry> geometries, double bufferDistance) {
-        if (bufferDistance <= 0.0) {
+    private List<Geometry> bufferGroup(String groupName, List<Geometry> geometries, double bufferDistance) {
+        if (bufferDistance <= 0.0 || geometries == null || geometries.isEmpty()) {
             return geometries;
         }
 
-        // Build spatial index for neighbor subtraction within the same hierarchy level
-        STRtree index = new STRtree();
-        for (int i = 0; i < geometries.size(); i++) {
-            if (geometries.get(i) != null && !geometries.get(i).isEmpty()) {
-                index.insert(geometries.get(i).getEnvelopeInternal(), geometries.get(i));
+        List<Geometry> validPolygons = new ArrayList<>();
+        for (Geometry g : geometries) {
+            if (g instanceof org.locationtech.jts.geom.Polygonal && !g.isEmpty()) {
+                validPolygons.add(g);
             }
         }
 
+        if (validPolygons.isEmpty()) {
+            return geometries;
+        }
+
+        // Spatial index for fast local neighbor query
+        STRtree index = new STRtree();
+        for (Geometry g : validPolygons) {
+            index.insert(g.getEnvelopeInternal(), g);
+        }
+
         List<Geometry> bufferedResult = new ArrayList<>();
-        for (Geometry geom : geometries) {
+        int total = geometries.size();
+        long lastLogTime = System.currentTimeMillis();
+
+        for (int i = 0; i < total; i++) {
+            Geometry geom = geometries.get(i);
+
+            if ((i + 1) % 1000 == 0 || (System.currentTimeMillis() - lastLogTime > 3000)) {
+                System.out.printf(Locale.ROOT, "  [%s] Buffering progress: %,d/%,d features (%.1f%%)\n",
+                        groupName, i + 1, total, (double) (i + 1) / total * 100);
+                lastLogTime = System.currentTimeMillis();
+            }
+
             if (!(geom instanceof org.locationtech.jts.geom.Polygonal) || geom.isEmpty()) {
                 bufferedResult.add(geom);
                 continue;
@@ -266,17 +295,51 @@ public class GeoJSONSimplify {
 
             @SuppressWarnings("unchecked")
             List<Geometry> candidates = index.query(buffered.getEnvelopeInternal());
+            List<Geometry> polygonalCandidates = new ArrayList<>();
             for (Geometry neighbor : candidates) {
-                if (neighbor == geom || !(neighbor instanceof org.locationtech.jts.geom.Polygonal)) {
+                if (neighbor instanceof org.locationtech.jts.geom.Polygonal && !neighbor.isEmpty()) {
+                    polygonalCandidates.add(neighbor);
+                }
+            }
+
+            if (!polygonalCandidates.isEmpty()) {
+                try {
+                    // Perform local union of candidate neighbors for instant difference calculation
+                    Geometry localLandmass = org.locationtech.jts.operation.union.UnaryUnionOp.union(polygonalCandidates);
+                    if (localLandmass.covers(buffered)) {
+                        // Entirely inland feature: buffer is 100% covered by local landmass, inland borders untouched
+                        bufferedResult.add(geom);
+                        continue;
+                    }
+                    Geometry oceanExtension = buffered.difference(localLandmass);
+                    if (oceanExtension.isEmpty()) {
+                        bufferedResult.add(geom);
+                        continue;
+                    }
+                    // Extend coastal border into ocean space while keeping inland borders untouched
+                    Geometry finalGeom = geom.union(oceanExtension);
+                    bufferedResult.add(finalGeom);
+                    continue;
+                } catch (Exception e) {
+                    // Fallback to spatial index neighbor subtraction if difference fails
+                }
+            }
+
+            // Fallback: Individual neighbor subtraction using spatial index
+            for (Geometry neighbor : polygonalCandidates) {
+                if (neighbor == geom) {
                     continue;
                 }
-                try {
-                    buffered = buffered.difference(neighbor);
-                } catch (Exception e) {
+                if (buffered.getEnvelopeInternal().intersects(neighbor.getEnvelopeInternal())
+                        && buffered.intersects(neighbor)) {
                     try {
-                        buffered = buffered.buffer(0).difference(neighbor.buffer(0));
-                    } catch (Exception ex) {
-                        // ignore if subtraction fails
+                        buffered = buffered.difference(neighbor);
+                    } catch (Exception e) {
+                        try {
+                            buffered = buffered.buffer(0).difference(neighbor.buffer(0));
+                        } catch (Exception ex) {
+                            // ignore if subtraction fails
+                        }
                     }
                 }
             }
@@ -285,18 +348,22 @@ public class GeoJSONSimplify {
         return bufferedResult;
     }
 
-    protected String getHierarchyGroupKey(JsonObject properties) {
-        if (properties == null) {
+    protected String getHierarchyGroupKey(JsonObject json) {
+        if (json == null) {
             return "default";
         }
-        if (properties.has("subtype") && !properties.get("subtype").isJsonNull()) {
-            return properties.get("subtype").getAsString();
+        JsonObject props = json;
+        if (json.has("properties") && json.get("properties").isJsonObject()) {
+            props = json.getAsJsonObject("properties");
         }
-        if (properties.has("admin_level") && !properties.get("admin_level").isJsonNull()) {
-            return "admin_level_" + properties.get("admin_level").getAsString();
+        if (props.has("subtype") && !props.get("subtype").isJsonNull()) {
+            return props.get("subtype").getAsString();
         }
-        if (properties.has("class") && !properties.get("class").isJsonNull()) {
-            return properties.get("class").getAsString();
+        if (props.has("admin_level") && !props.get("admin_level").isJsonNull()) {
+            return "admin_level_" + props.get("admin_level").getAsString();
+        }
+        if (props.has("class") && !props.get("class").isJsonNull()) {
+            return props.get("class").getAsString();
         }
         return "default";
     }
