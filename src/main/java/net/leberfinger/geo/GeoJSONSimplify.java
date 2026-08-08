@@ -146,15 +146,37 @@ public class GeoJSONSimplify {
         }
 
         if (useCoverage && group.size() > 1) {
-            try {
-                double[] tolerances = new double[group.size()];
-                Arrays.fill(tolerances, distanceTolerance);
-                CoverageSimplifier simplifier = new CoverageSimplifier(geoms.toArray(new Geometry[0]));
-                Geometry[] simplified = simplifier.simplify(tolerances);
-                return Arrays.asList(simplified);
-            } catch (Exception e) {
-                // Fallback to individual simplification if CoverageSimplifier fails
-                System.err.println("Warning: CoverageSimplifier failed on group, falling back to individual simplification: " + e.getMessage());
+            List<Integer> polygonIndices = new ArrayList<>();
+            List<Geometry> polygons = new ArrayList<>();
+            for (int i = 0; i < geoms.size(); i++) {
+                Geometry g = geoms.get(i);
+                if (g instanceof org.locationtech.jts.geom.Polygonal && !g.isEmpty()) {
+                    polygonIndices.add(i);
+                    polygons.add(g);
+                }
+            }
+
+            if (polygons.size() > 1) {
+                try {
+                    double[] tolerances = new double[polygons.size()];
+                    Arrays.fill(tolerances, distanceTolerance);
+                    CoverageSimplifier simplifier = new CoverageSimplifier(polygons.toArray(new Geometry[0]));
+                    Geometry[] simplifiedPolygons = simplifier.simplify(tolerances);
+
+                    List<Geometry> result = new ArrayList<>(geoms);
+                    for (int i = 0; i < polygonIndices.size(); i++) {
+                        result.set(polygonIndices.get(i), simplifiedPolygons[i]);
+                    }
+                    for (int i = 0; i < geoms.size(); i++) {
+                        if (!(geoms.get(i) instanceof org.locationtech.jts.geom.Polygonal)) {
+                            double tol = distanceTolerance > 0 ? distanceTolerance : getDistanceTolerance(geoms.get(i));
+                            result.set(i, TopologyPreservingSimplifier.simplify(geoms.get(i), tol));
+                        }
+                    }
+                    return result;
+                } catch (Exception e) {
+                    System.err.println("Warning: CoverageSimplifier failed on group, falling back to individual simplification: " + e.getMessage());
+                }
             }
         }
 
@@ -175,17 +197,24 @@ public class GeoJSONSimplify {
         // Build spatial index for neighbor subtraction within the same hierarchy level
         STRtree index = new STRtree();
         for (int i = 0; i < geometries.size(); i++) {
-            index.insert(geometries.get(i).getEnvelopeInternal(), geometries.get(i));
+            if (geometries.get(i) != null && !geometries.get(i).isEmpty()) {
+                index.insert(geometries.get(i).getEnvelopeInternal(), geometries.get(i));
+            }
         }
 
         List<Geometry> bufferedResult = new ArrayList<>();
         for (Geometry geom : geometries) {
+            if (!(geom instanceof org.locationtech.jts.geom.Polygonal) || geom.isEmpty()) {
+                bufferedResult.add(geom);
+                continue;
+            }
+
             Geometry buffered = geom.buffer(bufferDistance);
 
             @SuppressWarnings("unchecked")
             List<Geometry> candidates = index.query(buffered.getEnvelopeInternal());
             for (Geometry neighbor : candidates) {
-                if (neighbor == geom) {
+                if (neighbor == geom || !(neighbor instanceof org.locationtech.jts.geom.Polygonal)) {
                     continue;
                 }
                 try {
