@@ -332,6 +332,55 @@ jobs:
       nicaragua:
         OSM_REGION: 'nicaragua'
         PBF_URL: 'https://download.geofabrik.de/central-america/nicaragua-latest.osm.pbf'
+      canada:
+        OSM_REGION: 'canada'
+        PBF_URL: 'https://download.geofabrik.de/north-america/canada-latest.osm.pbf'
+      greenland:
+        OSM_REGION: 'greenland'
+        PBF_URL: 'https://download.geofabrik.de/north-america/greenland-latest.osm.pbf'
+      mexico:
+        OSM_REGION: 'mexico'
+        PBF_URL: 'https://download.geofabrik.de/north-america/mexico-latest.osm.pbf'
+      us:
+        OSM_REGION: 'us'
+        PBF_URL: 'https://download.geofabrik.de/north-america/us-latest.osm.pbf'
+      argentina:
+        OSM_REGION: 'argentina'
+        PBF_URL: 'https://download.geofabrik.de/south-america/argentina-latest.osm.pbf'
+      bolivia:
+        OSM_REGION: 'bolivia'
+        PBF_URL: 'https://download.geofabrik.de/south-america/bolivia-latest.osm.pbf'
+      brazil:
+        OSM_REGION: 'brazil'
+        PBF_URL: 'https://download.geofabrik.de/south-america/brazil-latest.osm.pbf'
+      chile:
+        OSM_REGION: 'chile'
+        PBF_URL: 'https://download.geofabrik.de/south-america/chile-latest.osm.pbf'
+      colombia:
+        OSM_REGION: 'colombia'
+        PBF_URL: 'https://download.geofabrik.de/south-america/colombia-latest.osm.pbf'
+      ecuador:
+        OSM_REGION: 'ecuador'
+        PBF_URL: 'https://download.geofabrik.de/south-america/ecuador-latest.osm.pbf'
+      guyana:
+        OSM_REGION: 'guyana'
+        PBF_URL: 'https://download.geofabrik.de/south-america/guyana-latest.osm.pbf'
+      paraguay:
+        OSM_REGION: 'paraguay'
+        PBF_URL: 'https://download.geofabrik.de/south-america/paraguay-latest.osm.pbf'
+      peru:
+        OSM_REGION: 'peru'
+        PBF_URL: 'https://download.geofabrik.de/south-america/peru-latest.osm.pbf'
+      suriname:
+        OSM_REGION: 'suriname'
+        PBF_URL: 'https://download.geofabrik.de/south-america/suriname-latest.osm.pbf'
+      uruguay:
+        OSM_REGION: 'uruguay'
+        PBF_URL: 'https://download.geofabrik.de/south-america/uruguay-latest.osm.pbf'
+      venezuela:
+        OSM_REGION: 'venezuela'
+        PBF_URL: 'https://download.geofabrik.de/south-america/venezuela-latest.osm.pbf'
+
       albania:
         OSM_REGION: 'albania'
         PBF_URL: 'https://download.geofabrik.de/europe/albania-latest.osm.pbf'
