@@ -453,6 +453,13 @@
         
         function formatPropertyValue(key, val) {
             if (val === null || val === undefined) return '<span style="color:var(--text-muted)">null</span>';
+            if (typeof val === 'object') {
+                try {
+                    return escapeHtml(JSON.stringify(val));
+                } catch(e) {
+                    return escapeHtml(String(val));
+                }
+            }
             const strVal = String(val);
             
             // Format Wikidata links
@@ -480,7 +487,8 @@
         }
         
         function escapeHtml(str) {
-            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
         }
         
         function renderPropertiesTable() {
@@ -506,7 +514,7 @@
             for (let k of keys) {
                 const v = props[k];
                 const strK = String(k).toLowerCase();
-                const strV = String(v).toLowerCase();
+                const strV = (v === null || v === undefined) ? '' : (typeof v === 'object' ? JSON.stringify(v) : String(v)).toLowerCase();
                 
                 if (filterText && !strK.includes(filterText) && !strV.includes(filterText)) {
                     continue;
@@ -531,7 +539,8 @@
                 style: styleOptions,
                 onEachFeature: function(feature, l) {
                     const p = feature.properties || {};
-                    const name = p.name || p['official_name'] || p['@id'] || 'Feature';
+                    const rawName = p.name || p['official_name'] || p['@id'] || p['id'] || 'Feature';
+                    const name = String(rawName);
                     const lvl = p.admin_level ? ' (Level ' + p.admin_level + ')' : '';
                     
                     // Hover Tooltip
@@ -546,6 +555,7 @@
             });
             return layer;
         }
+
         
         function renderMap() {
             inputLayerGroup.clearLayers();
