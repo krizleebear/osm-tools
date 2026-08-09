@@ -530,12 +530,32 @@ jobs:
         PBF_URL: 'https://download.geofabrik.de/europe/ukraine-latest.osm.pbf'
 
   steps:
+  - task: DownloadPipelineArtifact@2
+    displayName: 'Download existing PBF baseline cache'
+    continueOnError: true
+    inputs:
+      buildType: 'specific'
+      project: 'f85b0393-1484-487a-b6d1-5120b54a70be'
+      definition: '3'
+      buildVersionToDownload: 'latest'
+      itemPattern: 'osm-data-$(OSM_REGION)/$(OSM_REGION).osm.pbf'
+      targetPath: '$(System.DefaultWorkingDirectory)/cached-pbfs'
+
   - task: Bash@3
-    displayName: 'Download PBF'
+    displayName: 'Reuse cached PBF or download new extract'
     inputs:
       targetType: 'inline'
       script: |
-        wget --no-verbose --output-document=$(OSM_REGION).osm.pbf $(PBF_URL)
+        PREVIOUS_PBF="$(System.DefaultWorkingDirectory)/cached-pbfs/osm-data-$(OSM_REGION)/$(OSM_REGION).osm.pbf"
+        TARGET_PBF="$(OSM_REGION).osm.pbf"
+
+        if [ -f "$PREVIOUS_PBF" ]; then
+          echo "Reusing existing baseline PBF for region '$(OSM_REGION)' from previous build..."
+          cp "$PREVIOUS_PBF" "$TARGET_PBF"
+        else
+          echo "Downloading NEW PBF extract for region '$(OSM_REGION)' from Geofabrik ($(PBF_URL))..."
+          wget --no-verbose --output-document="$TARGET_PBF" "$(PBF_URL)"
+        fi
 
   - task: PublishPipelineArtifact@1
     enabled: true
