@@ -36,3 +36,7 @@ To ensure a consistent development workflow, clean spatial processing, and clear
 - **Tag Continuity:** Never drop standard OSM properties during simplification (such as `name`, `subtype`, `admin_level`, `ISO3166-1`, and `ISO3166-2`) as these are parsed downstream to construct geocoder spatial indices.
 - **Maritime Coastline Preservation:** Ocean-facing borders must be buffered outward before simplification to prevent coastal coordinate drops on ports, shorelines, beaches, and harbors.
 - **Automated Consistency Verification:** Run `GeoJSONSimplifyVerifier` (or pass input/output files) to validate feature count completeness, geometry validity, tag continuity, area coverage preservation, and inland non-overlap invariants. See [QUALITY_GOALS.md](file:///Users/krizleebear/development/osm-tools/doc/QUALITY_GOALS.md) for threshold metrics.
+- **Transparent Failure Policy (No Hiding Errors / No Silent Fallbacks):** Processing tools and pipeline scripts must never mask missing input data or execute silent fallbacks to external endpoints. Errors must fail fast and explicitly with clear diagnostic logging detailing the missing file, root cause, and remediation steps.
+- **English Output Standard for CI/CD & Pipeline Logs:** All user-facing log outputs, diagnostic error messages, pipeline notices, and CLI reports must be written strictly in clear, professional English to maintain consistency across international developer environments and automated CI/CD runners.
+
+
