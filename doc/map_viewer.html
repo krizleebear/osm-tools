@@ -205,7 +205,10 @@
             <button class="btn active" onclick="filterAdminLevel('ALL')">ALL</button>
         </div>
         
-        <div class="section-title">Feature Search</div>
+        <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>Feature Search</span>
+            <button class="btn" style="padding: 2px 8px; font-size: 0.7rem;" onclick="renderMap(true)" title="Zoom to fit rendered features">Fit View ⛶</button>
+        </div>
         <input type="text" class="search-input" id="search-input" placeholder="Search name or @id..." oninput="onSearch(this.value)">
         
         <div class="section-title">Performance Guard</div>
@@ -346,7 +349,7 @@
                 }
                 document.getElementById('header-filename').innerText = file.name;
                 extractAdminLevels();
-                renderMap();
+                renderMap(true);
             };
             reader.readAsText(file);
         }
@@ -381,7 +384,7 @@
         function filterAdminLevel(lvl) {
             selectedAdminLevel = lvl;
             extractAdminLevels();
-            renderMap();
+            renderMap(false);
         }
         
         function setMode(mode) {
@@ -392,18 +395,22 @@
             document.getElementById('btn-mode-input').classList.toggle('active', showInput);
             document.getElementById('btn-mode-output').classList.toggle('active', showOutput);
             document.getElementById('btn-mode-diff').classList.toggle('active', showDiff);
-            renderMap();
+            renderMap(false);
         }
         
         function setCap(cap) {
             maxRenderCap = cap;
             document.getElementById('cap-label').innerText = cap >= 99999 ? 'UNLIMITED' : cap + ' features';
-            renderMap();
+            renderMap(false);
         }
         
         function onSearch(val) {
+            const oldQuery = searchQuery;
             searchQuery = val.toLowerCase().trim();
-            renderMap();
+            // Only auto-fit bounds when transitioning from empty to a non-empty search query.
+            // Do NOT auto-fit bounds when clearing the search query so user preserves current zoom/center!
+            const fitBounds = (searchQuery.length > 0 && oldQuery.length === 0);
+            renderMap(fitBounds);
         }
         
         function featureMatchesFilter(f) {
@@ -557,7 +564,7 @@
         }
 
         
-        function renderMap() {
+        function renderMap(fitBounds = false) {
             inputLayerGroup.clearLayers();
             outputLayerGroup.clearLayers();
             diffLayerGroup.clearLayers();
@@ -594,10 +601,11 @@
             }
             
             document.getElementById('rendered-count').innerText = rendered + ' / ' + totalEligible;
-            if (rendered > 0 && bounds.isValid()) {
+            if (fitBounds && rendered > 0 && bounds.isValid()) {
                 map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
             }
         }
+
     </script>
 </body>
 </html>
