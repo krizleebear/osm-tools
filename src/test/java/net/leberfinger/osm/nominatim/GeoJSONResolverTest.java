@@ -134,4 +134,81 @@ class GeoJSONResolverTest {
        assertNotNull(countryProperty);
        assertEquals("France métropolitaine", countryProperty.getAsString());
    }
+
+	/**
+	 * Verifies fallback to admin_level=3 ("France métropolitaine") when admin_level=2
+	 * is incomplete in single-country PBF extracts due to overseas territories.
+	 */
+	@Test
+	void franceAdminLevel3HierarchyFixture() throws IOException, ParseException {
+		String parisPOI = "{\"type\": \"Feature\", \"properties\": {\"name\": \"Notre-Dame de Paris\"}, \"geometry\": {\"type\": \"Point\", \"coordinates\": [2.3460262, 48.8528351]}}";
+		PolygonCache cache = PolygonCache.fromGeoJSONStream(Paths.get(TEST_RESOURCES_DIR, "fixtures", "france_hierarchy.geojsonseq"));
+		GeoJSONResolver resolver = new GeoJSONResolver(cache);
+		JsonObject resolved = resolver.addAddress(parisPOI);
+		AdminPlaceAssert.assertThat(resolved)
+				.hasCountry("France métropolitaine")
+				.hasState("Île-de-France")
+				.hasCity("Paris");
+	}
+
+	/**
+	 * Verifies coastal POI resolution (~500m offshore) to prevent shoreline POIs
+	 * from falling into ocean space (null country/city) after simplification.
+	 */
+	@Test
+	void coastalRostockFixture() throws IOException, ParseException {
+		String warnemuendePOI = "{\"type\": \"Feature\", \"properties\": {\"name\": \"Warnemünde Beach POI\"}, \"geometry\": {\"type\": \"Point\", \"coordinates\": [12.08, 54.18]}}";
+		PolygonCache cache = PolygonCache.fromGeoJSONStream(Paths.get(TEST_RESOURCES_DIR, "fixtures", "coastal_rostock.geojsonseq"));
+		GeoJSONResolver resolver = new GeoJSONResolver(cache);
+		JsonObject resolved = resolver.addAddress(warnemuendePOI);
+		AdminPlaceAssert.assertThat(resolved)
+				.hasState("Mecklenburg-Vorpommern")
+				.hasCity("Rostock");
+	}
+
+	/**
+	 * Verifies multi-level administrative hierarchy mapping (districts, cities, counties, states)
+	 * ensuring city attributes inherit correctly without getting overwritten by districts.
+	 */
+	@Test
+	void cityDistrictsSchwabachFixture() throws IOException, ParseException {
+		String schwabachPOI = "{\"type\": \"Feature\", \"properties\": {\"name\": \"Schwabach Center POI\"}, \"geometry\": {\"type\": \"Point\", \"coordinates\": [11.0231662, 49.361308]}}";
+		PolygonCache cache = PolygonCache.fromGeoJSONStream(Paths.get(TEST_RESOURCES_DIR, "fixtures", "city_districts_schwabach.geojsonseq"));
+		GeoJSONResolver resolver = new GeoJSONResolver(cache);
+		JsonObject resolved = resolver.addAddress(schwabachPOI);
+		AdminPlaceAssert.assertThat(resolved)
+				.hasState("Bayern")
+				.hasCity("Schwabach");
+	}
+
+	/**
+	 * Verifies enclave priority resolution for German municipality Büsingen
+	 * fully enclosed within Swiss territory (Kanton Schaffhausen).
+	 */
+	@Test
+	void enclaveBuesingenFixture() throws IOException, ParseException {
+		String buesingenPOI = "{\"type\": \"Feature\", \"properties\": {\"name\": \"Büsingen POI\"}, \"geometry\": {\"type\": \"Point\", \"coordinates\": [8.691, 47.697]}}";
+		PolygonCache cache = PolygonCache.fromGeoJSONStream(Paths.get(TEST_RESOURCES_DIR, "fixtures", "enclave_buesingen.geojsonseq"));
+		GeoJSONResolver resolver = new GeoJSONResolver(cache);
+		JsonObject resolved = resolver.addAddress(buesingenPOI);
+		AdminPlaceAssert.assertThat(resolved)
+				.hasState("Baden-Württemberg")
+				.hasCity("Büsingen am Hochrhein");
+	}
+
+	/**
+	 * Verifies PolygonCache stability when loading mixed LineString (borders) and
+	 * Point (admin centres) features alongside polygon boundaries.
+	 */
+	@Test
+	void linestringAndPointFeaturesFixture() throws IOException, ParseException {
+		PolygonCache cache = PolygonCache.fromGeoJSONStream(Paths.get(TEST_RESOURCES_DIR, "fixtures", "linestring_and_points.geojsonseq"));
+		assertNotNull(cache);
+		String testPOI = "{\"type\": \"Feature\", \"properties\": {\"name\": \"Monaco POI\"}, \"geometry\": {\"type\": \"Point\", \"coordinates\": [7.42, 43.73]}}";
+		GeoJSONResolver resolver = new GeoJSONResolver(cache);
+		JsonObject resolved = resolver.addAddress(testPOI);
+		assertNotNull(resolved);
+	}
 }
+
+

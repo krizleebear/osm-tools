@@ -36,7 +36,11 @@ hs_err_pid*
 
 # Local data & temporary test files
 data/
+simplified-europe/
+*.png
 src/test/resources/*.geojsonseq
 !src/test/resources/polygon-palling.geojsonseq
 !src/test/resources/frenchTestHierarchy.geojsonseq
 !src/test/resources/ingol-divisions.geojsonseq
+!src/test/resources/fixtures/*.geojsonseq
+

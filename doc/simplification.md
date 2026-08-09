@@ -60,3 +60,11 @@ The updated `GeoJSONSimplify` command line interface will support the following 
 *   `-t, --tolerance`: Simplification distance tolerance (default: `0.001`).
 *   `-b, --buffer`: Coastal buffering distance in degrees (default: `0.0`, no buffering). Set to `0.01` for a 1km buffer.
 *   `-c, --coverage`: Use topology-preserving coverage simplification (default: false).
+
+---
+
+## Non-Polygonal Geometries & Hierarchy Levels
+
+- **Non-Polygonal Features (`LineString`, `Point`)**: `GeoJSONSimplify` processes non-polygonal features separately from polygonal coverage simplification. These features (border lines, territorial sea limits, admin centre points) are preserved for spatial indexing and geocoder metadata.
+- **Administrative Hierarchy (`admin_level`)**: Feature groups are partitioned by `admin_level` or `subtype` during simplification. Geocoders should note that countries with overseas territories (e.g., France, UK, Netherlands) may store mainland polygons under `admin_level=3` (*France métropolitaine*), while `admin_level=2` covers the global sovereign state.
+
