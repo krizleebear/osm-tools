@@ -40,8 +40,15 @@ class GeofabrikIndexerTest {
 
 		assertTrue(childrenPBFs.size() > parentPBFs.size());
 		
+		List<String> urls = childrenPBFs.collect(URL::toString).toList();
+		assertThat(urls).anyMatch(u -> u.contains("/north-america/canada-latest.osm.pbf"));
+		assertThat(urls).anyMatch(u -> u.contains("/north-america/us-latest.osm.pbf"));
+		assertThat(urls).anyMatch(u -> u.contains("/north-america/mexico-latest.osm.pbf"));
+		assertThat(urls).anyMatch(u -> u.contains("/south-america/brazil-latest.osm.pbf"));
+
 		subIndex.printDownloadURLs();
 	}
+
 
 	@Test
 	void buildAbsoluteDestination() throws MalformedURLException {
