@@ -15,6 +15,9 @@ trigger:
 #    - '*'
   paths:
     exclude:
+    - '*.md'
+    - 'doc/**'
+    - 'AGENTS.md'
     - azure-pipelines-download-osm.yml
     - azure-polygon-pipelines.yml
 
