@@ -37,6 +37,14 @@ import java.util.stream.Stream;
 
 public class GeoJSONSimplify {
 
+    // Adaptive per-admin-level simplification tolerances (spec §4.1 of
+    // SPEC_OSM_POLYGONS_SUBDIVISIONS.md), calibrated to balance detail preservation
+    // for small sub-municipal units against total dataset size on large administrative levels.
+    // Expressed in decimal degrees (1° ≈ 111 km at equator, ~74 km in Central Europe).
+    private static final double TOLERANCE_LEVEL_2_4 = 0.001;  // ~100 m: Country, State (macro boundaries)
+    private static final double TOLERANCE_LEVEL_5_8 = 0.0005; // ~50 m: County, City/Gemeinde (dominant volume)
+    private static final double TOLERANCE_LEVEL_9_11 = 0.0001; // ~10 m: Stadtbezirk, Ortsteil (micro boundaries)
+
     private final JsonParser parser = new JsonParser();
     private final GeoJsonReader geoReader = new GeoJsonReader(new GeometryFactory());
     private final GeoJsonWriter geoWriter = new GeoJsonWriter(7);
@@ -284,7 +292,9 @@ public class GeoJSONSimplify {
             if (polygons.size() > 1) {
                 try {
                     double[] tolerances = new double[polygons.size()];
-                    Arrays.fill(tolerances, distanceTolerance);
+                    for (int i = 0; i < polygons.size(); i++) {
+                        tolerances[i] = resolveTolerance(group.get(polygonIndices.get(i)), distanceTolerance);
+                    }
                     CoverageSimplifier simplifier = new CoverageSimplifier(polygons.toArray(new Geometry[0]));
                     Geometry[] simplifiedPolygons = simplifier.simplify(tolerances);
 
@@ -294,8 +304,7 @@ public class GeoJSONSimplify {
                     }
                     for (int i = 0; i < geoms.size(); i++) {
                         if (!(geoms.get(i) instanceof org.locationtech.jts.geom.Polygonal)) {
-                            double tol = distanceTolerance > 0 ? distanceTolerance : getDistanceTolerance(geoms.get(i));
-                            result.set(i, TopologyPreservingSimplifier.simplify(geoms.get(i), tol));
+                            result.set(i, TopologyPreservingSimplifier.simplify(geoms.get(i), resolveTolerance(group.get(i), distanceTolerance)));
                         }
                     }
                     return result;
@@ -310,9 +319,9 @@ public class GeoJSONSimplify {
 
         // Individual topology preserving simplification
         List<Geometry> result = new ArrayList<>();
-        for (Geometry g : geoms) {
-            double tol = distanceTolerance > 0 ? distanceTolerance : getDistanceTolerance(g);
-            result.add(TopologyPreservingSimplifier.simplify(g, tol));
+        for (int i = 0; i < geoms.size(); i++) {
+            double tol = resolveTolerance(group.get(i), distanceTolerance);
+            result.add(TopologyPreservingSimplifier.simplify(geoms.get(i), tol));
         }
         return result;
     }
@@ -436,12 +445,66 @@ public class GeoJSONSimplify {
         String geometryJSON = json.remove("geometry").toString();
         Geometry geometry = geoReader.read(geometryJSON);
 
-        double distanceTolerance = getDistanceTolerance(geometry);
+        JsonObject props = json.has("properties") && json.get("properties").isJsonObject() ? json.getAsJsonObject("properties") : json;
+        double levelTolerance = getAdminLevelTolerance(props);
+        double distanceTolerance = levelTolerance > 0 ? levelTolerance : getDistanceTolerance(geometry);
         Geometry simplified = TopologyPreservingSimplifier.simplify(geometry, distanceTolerance);
 
         String simplifiedJSON = geoWriter.write(simplified);
         JsonElement simplifiedObject = parser.parse(simplifiedJSON);
         json.add("geometry", simplifiedObject);
+    }
+
+    /**
+     * Resolves the simplification tolerance for a single feature:
+     * adaptive per-admin-level tolerance (spec §4.1) takes precedence when the feature
+     * carries a known admin_level; otherwise fall back to the explicit tolerance, or the
+     * envelope-based heuristic when the explicit tolerance is 0.
+     */
+    double resolveTolerance(GeoJSON feature, double distanceTolerance) {
+        double levelTolerance = getAdminLevelTolerance(feature.properties);
+        if (levelTolerance > 0) {
+            return levelTolerance;
+        }
+        return distanceTolerance > 0 ? distanceTolerance : getDistanceTolerance(feature.geometry);
+    }
+
+    /**
+     * Returns the adaptive tolerance for a feature's admin_level property
+     * (levels 2-11, see spec §4.1), or -1 if no applicable level is found.
+     */
+    static double getAdminLevelTolerance(JsonObject props) {
+        if (props == null) {
+            return -1;
+        }
+        if (props.has("properties") && props.get("properties").isJsonObject()) {
+            props = props.getAsJsonObject("properties");
+        }
+        if (!props.has("admin_level") || props.get("admin_level").isJsonNull()) {
+            return -1;
+        }
+        String levelStr;
+        try {
+            levelStr = props.get("admin_level").getAsString().trim();
+        } catch (UnsupportedOperationException e) {
+            return -1;
+        }
+        int level;
+        try {
+            level = Integer.parseInt(levelStr);
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+        if (level >= 2 && level <= 4) {
+            return TOLERANCE_LEVEL_2_4;
+        }
+        if (level >= 5 && level <= 8) {
+            return TOLERANCE_LEVEL_5_8;
+        }
+        if (level >= 9 && level <= 11) {
+            return TOLERANCE_LEVEL_9_11;
+        }
+        return -1;
     }
 
     private static double getDistanceTolerance(Geometry geometry) {
