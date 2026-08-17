@@ -63,7 +63,7 @@ public class GeoJSONSimplify {
                 .withOptionalArg().ofType(Double.class).defaultsTo(0.001);
 
         OptionSpec<Double> bufferOpt = parser.acceptsAll(Arrays.asList("b", "buffer"), "coastal outward buffer distance in degrees")
-                .withOptionalArg().ofType(Double.class).defaultsTo(0.01);
+                .withOptionalArg().ofType(Double.class).defaultsTo(0.0);
 
         OptionSpec<Boolean> coverageOpt = parser.acceptsAll(Arrays.asList("c", "coverage"), "use coverage simplification")
                 .withOptionalArg().ofType(Boolean.class).defaultsTo(true);
@@ -331,6 +331,21 @@ public class GeoJSONSimplify {
             return geometries;
         }
 
+        // Coastal buffering is only physically meaningful for macro administrative boundaries (levels 2-4, or country/state).
+        // Skip buffering for sub-municipal and municipal levels (levels 5-11) or large groups to prevent OOM / N^2 complexity.
+        if (groupName != null && groupName.startsWith("admin_level_")) {
+            try {
+                int level = Integer.parseInt(groupName.substring("admin_level_".length()));
+                if (level >= 5) {
+                    return geometries;
+                }
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        if (geometries.size() > 5000) {
+            return geometries;
+        }
+
         List<Geometry> validPolygons = new ArrayList<>();
         for (Geometry g : geometries) {
             if (g instanceof org.locationtech.jts.geom.Polygonal && !g.isEmpty()) {
@@ -350,16 +365,14 @@ public class GeoJSONSimplify {
 
         List<Geometry> bufferedResult = new ArrayList<>();
         int total = geometries.size();
-        long lastLogTime = System.currentTimeMillis();
 
         for (int i = 0; i < total; i++) {
             Geometry geom = geometries.get(i);
 
-            if ((i + 1) % 2000 == 0 || (System.currentTimeMillis() - lastLogTime > 5000)) {
+            if (total >= 1000 && (i + 1) % 1000 == 0) {
                 System.out.printf(Locale.ROOT, "  [%s] Buffering progress: %,d/%,d features (%.1f%%)\n",
                         groupName, i + 1, total, (double) (i + 1) / total * 100);
                 System.out.flush();
-                lastLogTime = System.currentTimeMillis();
             }
 
             if (!(geom instanceof org.locationtech.jts.geom.Polygonal) || geom.isEmpty()) {

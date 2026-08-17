@@ -269,8 +269,8 @@ class GeoJSONSimplifyTest {
 
         Files.write(inputGeojson, (coastalPolygonJSON + "\n" + inlandPolygonJSON + "\n").getBytes());
 
-        // Run GeoJSONSimplify with default pipeline settings (coverage=true, buffer=0.01, tolerance=0.001)
-        GeoJSONSimplify.main(new String[]{inputGeojson.toString()});
+        // Run GeoJSONSimplify with explicit coastal buffer (buffer=0.01, tolerance=0.001)
+        GeoJSONSimplify.main(new String[]{"--buffer", "0.01", inputGeojson.toString()});
 
         Path simplifiedFile = tempDir.resolve("coastal_test.simplified.geojsonseq");
         assertTrue(Files.exists(simplifiedFile));
