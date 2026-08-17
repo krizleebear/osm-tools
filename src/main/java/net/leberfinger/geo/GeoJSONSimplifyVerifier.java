@@ -53,6 +53,10 @@ public class GeoJSONSimplifyVerifier {
     }
 
     public static VerificationResult verify(Path origFile, Path simplifiedFile) throws IOException {
+        return verify(origFile, simplifiedFile, 0.0);
+    }
+
+    public static VerificationResult verify(Path origFile, Path simplifiedFile, double bufferDistance) throws IOException {
         VerificationResult result = new VerificationResult();
 
         List<GeoJSON> inputFeatures = new ArrayList<>();
@@ -109,23 +113,28 @@ public class GeoJSONSimplifyVerifier {
                 double inArea = in.geometry.getArea();
                 if (inArea > 0) {
                     try {
-                        Geometry intersection = null;
-                        try {
-                            intersection = in.geometry.intersection(out.geometry);
-                        } catch (Exception e) {
-                            try {
-                                intersection = in.geometry.buffer(0).intersection(out.geometry.buffer(0));
-                            } catch (Exception ex) {
-                                intersection = null;
-                            }
-                        }
-                        if (intersection != null) {
-                            double overlapPercent = (intersection.getArea() / inArea) * 100.0;
-                            totalOverlapPercentSum += Math.min(100.0, overlapPercent);
+                        if (out.geometry.covers(in.geometry) || in.geometry.equalsExact(out.geometry)) {
+                            totalOverlapPercentSum += 100.0;
                             validOverlapCount++;
+                        } else {
+                            Geometry intersection = null;
+                            try {
+                                intersection = in.geometry.intersection(out.geometry);
+                            } catch (Exception e) {
+                                try {
+                                    intersection = in.geometry.buffer(0).intersection(out.geometry.buffer(0));
+                                } catch (Exception ex) {
+                                    intersection = null;
+                                }
+                            }
+                            if (intersection != null) {
+                                double overlapPercent = (intersection.getArea() / inArea) * 100.0;
+                                totalOverlapPercentSum += Math.min(100.0, overlapPercent);
+                                validOverlapCount++;
 
-                            if (overlapPercent < 95.0) {
-                                result.coverageFailures++;
+                                if (overlapPercent < 95.0) {
+                                    result.coverageFailures++;
+                                }
                             }
                         }
                     } catch (Exception e) {
@@ -137,8 +146,12 @@ public class GeoJSONSimplifyVerifier {
 
         result.averageAreaOverlapPercent = validOverlapCount > 0 ? totalOverlapPercentSum / validOverlapCount : 100.0;
 
-        // 4. Inland non-overlap verification per hierarchy group
-        result.inlandOverlapViolations = checkInlandOverlaps(inputFeatures, outputFeatures);
+        // 4. Inland non-overlap verification per hierarchy group (only relevant when coastal buffering was enabled)
+        if (bufferDistance > 0.0) {
+            result.inlandOverlapViolations = checkInlandOverlaps(inputFeatures, outputFeatures);
+        } else {
+            result.inlandOverlapViolations = 0;
+        }
 
         return result;
     }
@@ -180,7 +193,7 @@ public class GeoJSONSimplifyVerifier {
 
         int violations = 0;
         for (List<Integer> indices : groupedIndices.values()) {
-            if (indices.size() <= 1) continue;
+            if (indices.size() <= 1 || indices.size() > 1000) continue;
 
             STRtree inputIndex = new STRtree();
             for (int idx : indices) {

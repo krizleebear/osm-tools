@@ -185,7 +185,7 @@ public class GeoJSONSimplify {
                 groups, coverageSuccessGroups, coverageFallbackGroups, bufferDistance, sizeBefore, sizeAfter, spaceSavedPercent, elapsedTimeMs);
 
         try {
-            GeoJSONSimplifyVerifier.VerificationResult vResult = GeoJSONSimplifyVerifier.verify(inFile, destFile);
+            GeoJSONSimplifyVerifier.VerificationResult vResult = GeoJSONSimplifyVerifier.verify(inFile, destFile, bufferDistance);
             vResult.printSummary();
 
             if (vResult.totalInputFeatures != vResult.totalOutputFeatures) {
