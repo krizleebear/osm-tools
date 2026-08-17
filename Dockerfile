@@ -18,6 +18,11 @@ ENV JAVA_OPTS=""
 # copy the built jar (matches any jar produced by the build)
 COPY --from=build /workspace/target/*jar-with-dependencies.jar app.jar
 
+ARG GIT_COMMIT=""
+ARG BUILD_TIME=""
+RUN echo "git.commit.id.full=${GIT_COMMIT}" > /app/git.properties && \
+    echo "git.build.time=${BUILD_TIME}" >> /app/git.properties
+
 # Create a non-root user for security
 RUN groupadd -r osmtools && useradd -r -g osmtools osmtools
 RUN chown -R osmtools:osmtools /app
