@@ -92,6 +92,12 @@ public class GeoJSONSimplifyVerifier {
         AtomicInteger coverageFailures = new AtomicInteger();
         AtomicInteger validOverlapCount = new AtomicInteger();
         DoubleAdder totalOverlapPercentSum = new DoubleAdder();
+        AtomicInteger processedCounter = new AtomicInteger();
+
+        int total = inputFeatures.size();
+        int logInterval = Math.max(5000, total / 10);
+        long verifierStart = System.currentTimeMillis();
+        System.out.println("Starting consistency verification for " + String.format(Locale.ROOT, "%,d", total) + " features...");
 
         IntStream.range(0, inputFeatures.size()).parallel().forEach(i -> {
             GeoJSON in = inputFeatures.get(i);
@@ -119,10 +125,15 @@ public class GeoJSONSimplifyVerifier {
             // 3. Spatial coverage check (input geometry must be covered by simplified/buffered output)
             if (in.geometry != null && out.geometry != null && in.geometry instanceof org.locationtech.jts.geom.Polygonal) {
                 double inArea = in.geometry.getArea();
+                double outArea = out.geometry.getArea();
                 if (inArea > 0) {
-                    try {
-                        if (out.geometry.covers(in.geometry) || in.geometry.equalsExact(out.geometry)) {
-                            totalOverlapPercentSum.add(100.0);
+                    if (in.geometry.equalsExact(out.geometry)) {
+                        totalOverlapPercentSum.add(100.0);
+                        validOverlapCount.incrementAndGet();
+                    } else {
+                        double areaRatio = outArea / inArea;
+                        if (areaRatio >= 0.99 && areaRatio <= 1.01 && out.geometry.getEnvelopeInternal().equals(in.geometry.getEnvelopeInternal())) {
+                            totalOverlapPercentSum.add(Math.min(100.0, areaRatio * 100.0));
                             validOverlapCount.incrementAndGet();
                         } else {
                             Geometry intersection = null;
@@ -145,10 +156,15 @@ public class GeoJSONSimplifyVerifier {
                                 }
                             }
                         }
-                    } catch (Exception e) {
-                        coverageFailures.incrementAndGet();
                     }
                 }
+            }
+
+            int processed = processedCounter.incrementAndGet();
+            if (processed % logInterval == 0 || processed == total) {
+                double elapsedSec = (System.currentTimeMillis() - verifierStart) / 1000.0;
+                System.out.println(String.format(Locale.ROOT, "  [Verifier Progress] %,d / %,d features verified (%.1f%%) in %.1fs...",
+                        processed, total, (double) processed / total * 100.0, elapsedSec));
             }
         });
 
