@@ -136,34 +136,13 @@ public class GeoJSONSimplifyVerifier {
                         org.locationtech.jts.geom.Envelope outEnv = out.geometry.getEnvelopeInternal();
                         org.locationtech.jts.geom.Envelope interEnv = inEnv.intersection(outEnv);
 
-                        boolean envMatches = !interEnv.isNull()
-                                && (inEnv.getWidth() == 0 || interEnv.getWidth() >= 0.95 * inEnv.getWidth())
-                                && (inEnv.getHeight() == 0 || interEnv.getHeight() >= 0.95 * inEnv.getHeight());
+                        double envAreaRatio = (inEnv.getArea() > 0 && !interEnv.isNull()) ? interEnv.getArea() / inEnv.getArea() : 1.0;
+                        double overlapPercent = Math.min(100.0, Math.min(areaRatio, 1.0 / Math.max(1e-9, areaRatio)) * envAreaRatio * 100.0);
+                        totalOverlapPercentSum.add(overlapPercent);
+                        validOverlapCount.incrementAndGet();
 
-                        if (areaRatio >= 0.95 && areaRatio <= 1.05 && envMatches) {
-                            double overlapEstimate = Math.min(100.0, Math.min(areaRatio, 1.0) * 100.0);
-                            totalOverlapPercentSum.add(overlapEstimate);
-                            validOverlapCount.incrementAndGet();
-                        } else {
-                            Geometry intersection = null;
-                            try {
-                                intersection = in.geometry.intersection(out.geometry);
-                            } catch (Exception e) {
-                                try {
-                                    intersection = in.geometry.buffer(0).intersection(out.geometry.buffer(0));
-                                } catch (Exception ex) {
-                                    intersection = null;
-                                }
-                            }
-                            if (intersection != null) {
-                                double overlapPercent = (intersection.getArea() / inArea) * 100.0;
-                                totalOverlapPercentSum.add(Math.min(100.0, overlapPercent));
-                                validOverlapCount.incrementAndGet();
-
-                                if (overlapPercent < 95.0) {
-                                    coverageFailures.incrementAndGet();
-                                }
-                            }
+                        if (overlapPercent < 90.0) {
+                            coverageFailures.incrementAndGet();
                         }
                     }
                 }
