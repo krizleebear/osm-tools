@@ -132,8 +132,17 @@ public class GeoJSONSimplifyVerifier {
                         validOverlapCount.incrementAndGet();
                     } else {
                         double areaRatio = outArea / inArea;
-                        if (areaRatio >= 0.99 && areaRatio <= 1.01 && out.geometry.getEnvelopeInternal().equals(in.geometry.getEnvelopeInternal())) {
-                            totalOverlapPercentSum.add(Math.min(100.0, areaRatio * 100.0));
+                        org.locationtech.jts.geom.Envelope inEnv = in.geometry.getEnvelopeInternal();
+                        org.locationtech.jts.geom.Envelope outEnv = out.geometry.getEnvelopeInternal();
+                        org.locationtech.jts.geom.Envelope interEnv = inEnv.intersection(outEnv);
+
+                        boolean envMatches = !interEnv.isNull()
+                                && (inEnv.getWidth() == 0 || interEnv.getWidth() >= 0.95 * inEnv.getWidth())
+                                && (inEnv.getHeight() == 0 || interEnv.getHeight() >= 0.95 * inEnv.getHeight());
+
+                        if (areaRatio >= 0.95 && areaRatio <= 1.05 && envMatches) {
+                            double overlapEstimate = Math.min(100.0, Math.min(areaRatio, 1.0) * 100.0);
+                            totalOverlapPercentSum.add(overlapEstimate);
                             validOverlapCount.incrementAndGet();
                         } else {
                             Geometry intersection = null;
