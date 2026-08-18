@@ -7,6 +7,9 @@ import org.locationtech.jts.index.strtree.STRtree;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.DoubleAdder;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /**
@@ -82,30 +85,35 @@ public class GeoJSONSimplifyVerifier {
             outputMap.putIfAbsent(key, out);
         }
 
-        double totalOverlapPercentSum = 0.0;
-        int validOverlapCount = 0;
+        AtomicInteger validGeometriesCount = new AtomicInteger();
+        AtomicInteger invalidGeometriesCount = new AtomicInteger();
+        AtomicInteger tagContinuityMatches = new AtomicInteger();
+        AtomicInteger tagContinuityMismatches = new AtomicInteger();
+        AtomicInteger coverageFailures = new AtomicInteger();
+        AtomicInteger validOverlapCount = new AtomicInteger();
+        DoubleAdder totalOverlapPercentSum = new DoubleAdder();
 
-        for (int i = 0; i < inputFeatures.size(); i++) {
+        IntStream.range(0, inputFeatures.size()).parallel().forEach(i -> {
             GeoJSON in = inputFeatures.get(i);
             String key = getFeatureKey(in, i);
             GeoJSON out = outputMap.get(key);
             if (out == null && i < outputFeatures.size()) {
                 out = outputFeatures.get(i);
             }
-            if (out == null) continue;
+            if (out == null) return;
 
             // 1. Geometry validity
             if (out.geometry != null && out.geometry.isValid()) {
-                result.validGeometriesCount++;
+                validGeometriesCount.incrementAndGet();
             } else {
-                result.invalidGeometriesCount++;
+                invalidGeometriesCount.incrementAndGet();
             }
 
             // 2. Tag continuity check
             if (verifyTags(in.properties, out.properties)) {
-                result.tagContinuityMatches++;
+                tagContinuityMatches.incrementAndGet();
             } else {
-                result.tagContinuityMismatches++;
+                tagContinuityMismatches.incrementAndGet();
             }
 
             // 3. Spatial coverage check (input geometry must be covered by simplified/buffered output)
@@ -114,8 +122,8 @@ public class GeoJSONSimplifyVerifier {
                 if (inArea > 0) {
                     try {
                         if (out.geometry.covers(in.geometry) || in.geometry.equalsExact(out.geometry)) {
-                            totalOverlapPercentSum += 100.0;
-                            validOverlapCount++;
+                            totalOverlapPercentSum.add(100.0);
+                            validOverlapCount.incrementAndGet();
                         } else {
                             Geometry intersection = null;
                             try {
@@ -129,22 +137,28 @@ public class GeoJSONSimplifyVerifier {
                             }
                             if (intersection != null) {
                                 double overlapPercent = (intersection.getArea() / inArea) * 100.0;
-                                totalOverlapPercentSum += Math.min(100.0, overlapPercent);
-                                validOverlapCount++;
+                                totalOverlapPercentSum.add(Math.min(100.0, overlapPercent));
+                                validOverlapCount.incrementAndGet();
 
                                 if (overlapPercent < 95.0) {
-                                    result.coverageFailures++;
+                                    coverageFailures.incrementAndGet();
                                 }
                             }
                         }
                     } catch (Exception e) {
-                        result.coverageFailures++;
+                        coverageFailures.incrementAndGet();
                     }
                 }
             }
-        }
+        });
 
-        result.averageAreaOverlapPercent = validOverlapCount > 0 ? totalOverlapPercentSum / validOverlapCount : 100.0;
+        result.validGeometriesCount = validGeometriesCount.get();
+        result.invalidGeometriesCount = invalidGeometriesCount.get();
+        result.tagContinuityMatches = tagContinuityMatches.get();
+        result.tagContinuityMismatches = tagContinuityMismatches.get();
+        result.coverageFailures = coverageFailures.get();
+        int validOverlaps = validOverlapCount.get();
+        result.averageAreaOverlapPercent = validOverlaps > 0 ? totalOverlapPercentSum.sum() / validOverlaps : 100.0;
 
         // 4. Inland non-overlap verification per hierarchy group (only relevant when coastal buffering was enabled)
         if (bufferDistance > 0.0) {
