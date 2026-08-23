@@ -435,7 +435,8 @@
             }
             
             selectedHighlightLayer = L.geoJSON(feature, {
-                style: { color: '#f43f5e', weight: 4, fillOpacity: 0.45 }
+                style: { color: '#f43f5e', weight: 4, fillOpacity: 0.45 },
+                interactive: false
             }).addTo(map);
             
             const props = feature.properties || {};
@@ -547,11 +548,17 @@
                 onEachFeature: function(feature, l) {
                     const p = feature.properties || {};
                     const rawName = p.name || p['official_name'] || p['@id'] || p['id'] || 'Feature';
-                    const name = String(rawName);
+                    let nameDisplay = escapeHtml(String(rawName));
+                    
+                    const intName = p['name:en'] || p['int_name'];
+                    if (intName && intName !== rawName) {
+                        nameDisplay += ` <span style="color:#94a3b8; font-weight:normal;">(${escapeHtml(String(intName))})</span>`;
+                    }
+                    
                     const lvl = p.admin_level ? ' (Level ' + p.admin_level + ')' : '';
                     
                     // Hover Tooltip
-                    l.bindTooltip(`<b>${escapeHtml(name)}</b>${lvl}`, { sticky: true });
+                    l.bindTooltip(`<b>${nameDisplay}</b>${escapeHtml(lvl)}`, { sticky: true });
                     
                     // Click Handler
                     l.on('click', function(e) {
