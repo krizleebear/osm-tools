@@ -161,13 +161,55 @@
         .leaflet-popup-tip { background: rgba(15, 23, 42, 0.92) !important; }
         .popup-title { font-weight: 700; color: #38bdf8; margin-bottom: 6px; font-size: 0.9rem; }
         .popup-meta { color: var(--text-muted); font-size: 0.75rem; margin-bottom: 4px; }
+        /* Fullscreen Progress Overlay */
+        #progress-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(10px);
+            z-index: 9998; display: none; flex-direction: column;
+            justify-content: center; align-items: center; pointer-events: auto;
+            transition: opacity 0.2s ease;
+        }
+        #progress-overlay.active { display: flex; }
+        .progress-card {
+            background: var(--panel-bg); border: 1px solid var(--panel-border);
+            padding: 24px 32px; border-radius: 16px; box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+            display: flex; flex-direction: column; align-items: center; gap: 12px;
+            min-width: 320px; max-width: 440px; text-align: center;
+        }
+        .spinner {
+            width: 38px; height: 38px; border: 3px solid rgba(56, 189, 248, 0.2);
+            border-top-color: #38bdf8; border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .progress-title { font-size: 1rem; font-weight: 700; color: #fff; }
+        .progress-status { font-size: 0.82rem; color: var(--text-muted); }
+        .progress-bar-bg {
+            width: 100%; height: 6px; background: rgba(255,255,255,0.1);
+            border-radius: 3px; overflow: hidden; margin-top: 4px;
+        }
+        .progress-bar-fill {
+            height: 100%; width: 0%; background: linear-gradient(90deg, #00f2fe, #10b981);
+            border-radius: 3px; transition: width 0.15s ease;
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
     
+    <div id="progress-overlay">
+        <div class="progress-card">
+            <div class="spinner"></div>
+            <div class="progress-title" id="progress-title">Loading Dataset</div>
+            <div class="progress-status" id="progress-status">Parsing geometries...</div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="progress-bar"></div>
+            </div>
+        </div>
+    </div>
+    
     <div id="drag-overlay">
-        <div class="drag-msg">Drop GeoJSON or GeoJSONSeq files here</div>
+        <div class="drag-msg">Drop GeoJSON, GeoJSONSeq, or GeoParquet files here</div>
         <div class="drag-sub">Drop 1 or 2 files — Original vs Simplified will be auto-detected!</div>
     </div>
     
@@ -256,11 +298,55 @@
     </div>
     
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
+    <script type="module">
+        import * as duckdb from 'https://esm.sh/@duckdb/duckdb-wasm@1.28.0';
+        
         let inputData = [];
         let outputData = [];
         
         let map = L.map('map', { renderer: L.canvas() }).setView([51.1657, 10.4515], 6);
+        
+        // Patch Leaflet Canvas to prioritize top-most (last drawn / smaller) layers for hover & click
+        if (L.Canvas) {
+            L.Canvas.prototype._handleMouseHover = function (e, point) {
+                let candidate = null;
+                for (let order = this._drawFirst; order; order = order.next) {
+                    const layer = order.layer;
+                    if (layer && layer.options && layer.options.interactive !== false && layer._containsPoint && layer._containsPoint(point)) {
+                        candidate = layer;
+                    }
+                }
+
+                if (candidate !== this._hoveredLayer) {
+                    this._handleMouseOut(e);
+
+                    if (candidate) {
+                        L.DomUtil.addClass(this._container, 'leaflet-interactive');
+                        this._map._fireDOMEvent(e, 'mouseover', [candidate]);
+                        this._hoveredLayer = candidate;
+                    }
+                }
+
+                if (this._hoveredLayer) {
+                    this._map._fireDOMEvent(e, 'mousemove', [this._hoveredLayer]);
+                }
+            };
+
+            L.Canvas.prototype._onClick = function (e) {
+                const point = this._map.mouseEventToLayerPoint(e);
+                let candidate = null;
+                for (let order = this._drawFirst; order; order = order.next) {
+                    const layer = order.layer;
+                    if (layer && layer.options && layer.options.interactive !== false && layer._containsPoint && layer._containsPoint(point)) {
+                        candidate = layer;
+                    }
+                }
+                if (candidate) {
+                    this._map._fireDOMEvent(e, 'click', [candidate]);
+                }
+            };
+        }
+        
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; OpenStreetMap &copy; CARTO',
             subdomains: 'abcd',
@@ -281,44 +367,168 @@
         let outputLayerGroup = L.layerGroup().addTo(map);
         let diffLayerGroup = L.layerGroup().addTo(map);
         
+        // --- Standalone Pure JS WKB / EWKB to GeoJSON Parser ---
+        function parseWKB(bytes) {
+            if (!bytes || bytes.length === 0) return null;
+            let uint8 = bytes;
+            if (!(uint8 instanceof Uint8Array)) {
+                if (Array.isArray(uint8) || typeof uint8 === 'object') {
+                    uint8 = new Uint8Array(Object.values(uint8));
+                } else {
+                    return null;
+                }
+            }
+            const view = new DataView(uint8.buffer, uint8.byteOffset, uint8.byteLength);
+            let offset = 0;
+
+            function readGeom() {
+                if (offset >= view.byteLength) return null;
+                const isLE = view.getUint8(offset) === 1;
+                offset += 1;
+
+                let rawType = view.getUint32(offset, isLE);
+                offset += 4;
+
+                const hasZ = (rawType & 0x80000000) !== 0 || (rawType >= 1000 && rawType < 2000) || (rawType >= 3000 && rawType < 4000);
+                const hasM = (rawType & 0x40000000) !== 0 || (rawType >= 2000 && rawType < 3000) || (rawType >= 3000 && rawType < 4000);
+                const hasSRID = (rawType & 0x20000000) !== 0;
+
+                let type = rawType & 0xFF;
+                if (rawType >= 1000 && rawType < 2000) type = rawType - 1000;
+                else if (rawType >= 2000 && rawType < 3000) type = rawType - 2000;
+                else if (rawType >= 3000 && rawType < 4000) type = rawType - 3000;
+
+                if (hasSRID) offset += 4; // Skip SRID
+                const stride = 2 + (hasZ ? 1 : 0) + (hasM ? 1 : 0);
+
+                function readPoint() {
+                    const x = view.getFloat64(offset, isLE);
+                    const y = view.getFloat64(offset + 8, isLE);
+                    offset += stride * 8;
+                    return [x, y];
+                }
+
+                function readPointList() {
+                    const count = view.getUint32(offset, isLE);
+                    offset += 4;
+                    const pts = [];
+                    for (let i = 0; i < count; i++) pts.push(readPoint());
+                    return pts;
+                }
+
+                switch (type) {
+                    case 1: return { type: "Point", coordinates: readPoint() };
+                    case 2: return { type: "LineString", coordinates: readPointList() };
+                    case 3: {
+                        const numRings = view.getUint32(offset, isLE);
+                        offset += 4;
+                        const rings = [];
+                        for (let i = 0; i < numRings; i++) rings.push(readPointList());
+                        return { type: "Polygon", coordinates: rings };
+                    }
+                    case 4: {
+                        const count = view.getUint32(offset, isLE);
+                        offset += 4;
+                        const pts = [];
+                        for (let i = 0; i < count; i++) pts.push(readGeom().coordinates);
+                        return { type: "MultiPoint", coordinates: pts };
+                    }
+                    case 5: {
+                        const count = view.getUint32(offset, isLE);
+                        offset += 4;
+                        const lines = [];
+                        for (let i = 0; i < count; i++) lines.push(readGeom().coordinates);
+                        return { type: "MultiLineString", coordinates: lines };
+                    }
+                    case 6: {
+                        const count = view.getUint32(offset, isLE);
+                        offset += 4;
+                        const polys = [];
+                        for (let i = 0; i < count; i++) polys.push(readGeom().coordinates);
+                        return { type: "MultiPolygon", coordinates: polys };
+                    }
+                    default:
+                        return null;
+                }
+            }
+
+            try {
+                return readGeom();
+            } catch (err) {
+                console.error("WKB parse error:", err);
+                return null;
+            }
+        }
+        
+        // --- Progress Overlay Helper ---
+        function setProgress(title, status, percent) {
+            const overlay = document.getElementById('progress-overlay');
+            if (overlay) overlay.classList.add('active');
+            if (title) document.getElementById('progress-title').innerText = title;
+            if (status) document.getElementById('progress-status').innerText = status;
+            if (percent !== undefined && percent !== null) {
+                document.getElementById('progress-bar').style.width = Math.min(100, Math.max(0, percent)) + '%';
+            }
+        }
+
+        function hideProgress() {
+            const overlay = document.getElementById('progress-overlay');
+            if (overlay) overlay.classList.remove('active');
+        }
+
+        // --- DuckDB-Wasm Initialization ---
+        let db = null;
+        async function initDuckDB() {
+            if (db) return db;
+            document.getElementById('header-filename').innerText = "Initializing DuckDB-Wasm engine...";
+            
+            const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
+            const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
+            
+            const worker_url = URL.createObjectURL(
+                new Blob([`importScripts("${bundle.mainWorker}");`], {type: 'text/javascript'})
+            );
+            const worker = new Worker(worker_url);
+            const logger = new duckdb.ConsoleLogger();
+            db = new duckdb.AsyncDuckDB(logger, worker);
+            await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+            URL.revokeObjectURL(worker_url);
+            document.getElementById('header-filename').innerText = "Drag & drop files anywhere onto the map or screen";
+            return db;
+        }
+        initDuckDB(); // pre-warm
+        
         // Map click to deselect
         map.on('click', function(e) {
-            // Deselect if background map is clicked directly
             if (e.originalEvent.target.id === 'map' || e.originalEvent.target.classList.contains('leaflet-container')) {
                 deselectFeature();
             }
         });
         
-        // Setup Drag & Drop Handlers on Window
         window.addEventListener('dragover', function(e) {
             e.preventDefault();
             document.body.classList.add('dragging');
         });
         window.addEventListener('dragleave', function(e) {
-            if (e.clientX === 0 && e.clientY === 0) {
-                document.body.classList.remove('dragging');
-            }
+            if (e.clientX === 0 && e.clientY === 0) document.body.classList.remove('dragging');
         });
         window.addEventListener('drop', function(e) {
             e.preventDefault();
             document.body.classList.remove('dragging');
-            
             const files = Array.from(e.dataTransfer.files);
-            if (files.length === 0) return;
-            processDroppedFiles(files);
+            if (files.length > 0) processDroppedFiles(files);
         });
         
-        function handleFileSelect(e) {
+        window.handleFileSelect = function(e) {
             const files = Array.from(e.target.files);
-            if (files.length === 0) return;
-            processDroppedFiles(files);
-        }
+            if (files.length > 0) processDroppedFiles(files);
+        };
         
-        function processDroppedFiles(files) {
+        async function processDroppedFiles(files) {
             if (files.length === 1) {
                 const f = files[0];
-                const isSimplified = f.name.toLowerCase().includes('simplified');
-                readAndParse(f, isSimplified ? 'output' : 'input');
+                const isSimplified = f.name.toLowerCase().includes('simplified') || f.name.toLowerCase().includes('output');
+                await readAndParse(f, isSimplified ? 'output' : 'input');
             } else if (files.length >= 2) {
                 let f1 = files[0];
                 let f2 = files[1];
@@ -328,42 +538,107 @@
                     outF = f1;
                     inF = f2;
                 }
-                readAndParse(inF, 'input');
-                readAndParse(outF, 'output');
+                await readAndParse(inF, 'input');
+                await readAndParse(outF, 'output');
             }
         }
         
-        function readAndParse(file, target) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const text = e.target.result;
-                const features = parseGeoJSONSeq(text);
-                if (target === 'input') {
-                    inputData = features;
-                    document.getElementById('pill-in').querySelector('span').innerText = 'Input: ' + file.name;
-                    document.getElementById('count-in').innerText = features.length;
-                } else {
-                    outputData = features;
-                    document.getElementById('pill-out').querySelector('span').innerText = 'Output: ' + file.name;
-                    document.getElementById('count-out').innerText = features.length;
-                }
-                document.getElementById('header-filename').innerText = file.name;
-                extractAdminLevels();
-                renderMap(true);
-            };
-            reader.readAsText(file);
+        async function readAndParse(file, target) {
+            document.getElementById('header-filename').innerText = "Loading " + file.name + "...";
+            const isParquet = file.name.toLowerCase().endsWith('.parquet');
+            
+            let features = [];
+            
+            if (isParquet) {
+                features = await parseGeoParquet(file);
+            } else {
+                features = await parseGeoJSONSeqFile(file);
+            }
+            
+            if (target === 'input') {
+                inputData = features;
+                document.getElementById('pill-in').querySelector('span').innerText = 'Input: ' + file.name;
+                document.getElementById('count-in').innerText = features.length;
+            } else {
+                outputData = features;
+                document.getElementById('pill-out').querySelector('span').innerText = 'Output: ' + file.name;
+                document.getElementById('count-out').innerText = features.length;
+            }
+            
+            document.getElementById('header-filename').innerText = file.name;
+            extractAdminLevels();
+            renderMap(true);
         }
         
-        function parseGeoJSONSeq(text) {
-            const lines = text.split(/\r?\n/);
+        async function parseGeoJSONSeqFile(file) {
+            setProgress("Loading File", `Reading ${file.name}...`, 20);
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    setProgress("Parsing GeoJSON", "Extracting features from stream...", 50);
+                    const lines = e.target.result.split(/\r?\n/);
+                    const features = [];
+                    const total = lines.length;
+                    for (let i = 0; i < total; i++) {
+                        const line = lines[i].trim();
+                        if (!line) continue;
+                        try { features.push(JSON.parse(line)); } catch(err) {}
+                    }
+                    setProgress("Parsing Complete", `Extracted ${features.length} features`, 85);
+                    resolve(features);
+                };
+                reader.readAsText(file);
+            });
+        }
+        
+        async function parseGeoParquet(file) {
+            setProgress("Loading Parquet", "Initializing DuckDB-Wasm engine...", 10);
+            const duck = await initDuckDB();
+            
+            setProgress("Loading Parquet", `Mounting ${file.name} into virtual filesystem...`, 25);
+            await duck.registerFileHandle(file.name, file, duckdb.DuckDBDataProtocol.BROWSER_FILEREADER, true);
+            const conn = await duck.connect();
+            
+            setProgress("Executing Query", `Scanning ${file.name} with DuckDB...`, 40);
+            const res = await conn.query(`SELECT * FROM "${file.name}" LIMIT 50000`);
+            const rows = res.toArray();
+            
+            setProgress("Processing Geometries", `Decoding WKB geometries (0 / ${rows.length})...`, 50);
+            
             const features = [];
-            for (let line of lines) {
-                line = line.trim();
-                if (!line) continue;
-                try {
-                    features.push(JSON.parse(line));
-                } catch(e) {}
+            const total = rows.length;
+            const step = Math.max(1, Math.floor(total / 20));
+            
+            for (let i = 0; i < total; i++) {
+                const row = rows[i];
+                const props = row.toJSON();
+                let geom = null;
+                
+                const rawGeom = row.geometry || props.geometry || row.geom || props.geom || row.wkb_geometry || props.wkb_geometry;
+                delete props.geometry;
+                delete props.geom;
+                delete props.wkb_geometry;
+
+                if (rawGeom) {
+                    geom = parseWKB(rawGeom);
+                }
+                
+                features.push({
+                    type: "Feature",
+                    properties: props,
+                    geometry: geom
+                });
+
+                if (i % step === 0 || i === total - 1) {
+                    const pct = 50 + Math.floor((i / total) * 35);
+                    setProgress("Processing Geometries", `Decoding WKB geometries (${i + 1} / ${total})...`, pct);
+                    if (i % (step * 2) === 0) {
+                        await new Promise(r => setTimeout(r, 0));
+                    }
+                }
             }
+            
+            await conn.close();
             return features;
         }
         
@@ -380,14 +655,13 @@
                 container.innerHTML += '<button class="btn ' + (selectedAdminLevel===lvl?'active':'') + '" onclick="filterAdminLevel(\'' + lvl + '\')">' + lvl + '</button>';
             });
         }
-        
-        function filterAdminLevel(lvl) {
+        window.filterAdminLevel = function(lvl) {
             selectedAdminLevel = lvl;
             extractAdminLevels();
             renderMap(false);
-        }
+        };
         
-        function setMode(mode) {
+        window.setMode = function(mode) {
             if (mode === 'input') showInput = !showInput;
             if (mode === 'output') showOutput = !showOutput;
             if (mode === 'diff') showDiff = !showDiff;
@@ -396,22 +670,20 @@
             document.getElementById('btn-mode-output').classList.toggle('active', showOutput);
             document.getElementById('btn-mode-diff').classList.toggle('active', showDiff);
             renderMap(false);
-        }
+        };
         
-        function setCap(cap) {
+        window.setCap = function(cap) {
             maxRenderCap = cap;
             document.getElementById('cap-label').innerText = cap >= 99999 ? 'UNLIMITED' : cap + ' features';
             renderMap(false);
-        }
+        };
         
-        function onSearch(val) {
+        window.onSearch = function(val) {
             const oldQuery = searchQuery;
             searchQuery = val.toLowerCase().trim();
-            // Only auto-fit bounds when transitioning from empty to a non-empty search query.
-            // Do NOT auto-fit bounds when clearing the search query so user preserves current zoom/center!
             const fitBounds = (searchQuery.length > 0 && oldQuery.length === 0);
             renderMap(fitBounds);
-        }
+        };
         
         function featureMatchesFilter(f) {
             const p = f.properties || {};
@@ -429,11 +701,7 @@
         
         function selectFeature(feature, layer) {
             selectedFeature = feature;
-            
-            if (selectedHighlightLayer) {
-                map.removeLayer(selectedHighlightLayer);
-            }
-            
+            if (selectedHighlightLayer) map.removeLayer(selectedHighlightLayer);
             selectedHighlightLayer = L.geoJSON(feature, {
                 style: { color: '#f43f5e', weight: 4, fillOpacity: 0.45 },
                 interactive: false
@@ -446,51 +714,36 @@
             document.getElementById('prop-title').innerText = name;
             document.getElementById('prop-badge').innerText = lvl;
             document.getElementById('properties-card').classList.add('active');
-            
             renderPropertiesTable();
         }
         
-        function deselectFeature() {
+        window.deselectFeature = function() {
             selectedFeature = null;
             if (selectedHighlightLayer) {
                 map.removeLayer(selectedHighlightLayer);
                 selectedHighlightLayer = null;
             }
             document.getElementById('properties-card').classList.remove('active');
-        }
+        };
         
         function formatPropertyValue(key, val) {
             if (val === null || val === undefined) return '<span style="color:var(--text-muted)">null</span>';
             if (typeof val === 'object') {
-                try {
-                    return escapeHtml(JSON.stringify(val));
-                } catch(e) {
-                    return escapeHtml(String(val));
-                }
+                try { return escapeHtml(JSON.stringify(val)); } catch(e) { return escapeHtml(String(val)); }
             }
             const strVal = String(val);
-            
-            // Format Wikidata links
-            if (key === 'wikidata' && strVal.match(/^Q\d+$/)) {
-                return `<a href="https://www.wikidata.org/wiki/${strVal}" target="_blank" rel="noopener">${strVal} ↗</a>`;
-            }
-            // Format Wikipedia links
+            if (key === 'wikidata' && strVal.match(/^Q\d+$/)) return `<a href="https://www.wikidata.org/wiki/${strVal}" target="_blank" rel="noopener">${strVal} ↗</a>`;
             if (key === 'wikipedia') {
                 const parts = strVal.split(':');
                 const lang = parts.length > 1 ? parts[0] : 'en';
                 const page = parts.length > 1 ? parts.slice(1).join(':') : parts[0];
                 return `<a href="https://${lang}.wikipedia.org/wiki/${encodeURIComponent(page)}" target="_blank" rel="noopener">${strVal} ↗</a>`;
             }
-            // Format OSM @id / id links
             if (key === '@id' || key === 'id' || key === 'osm_id') {
                 const type = key.startsWith('@') ? 'relation' : 'relation';
                 return `<a href="https://www.openstreetmap.org/${type}/${strVal}" target="_blank" rel="noopener">${strVal} ↗</a>`;
             }
-            // Format URLs
-            if (strVal.startsWith('http://') || strVal.startsWith('https://')) {
-                return `<a href="${strVal}" target="_blank" rel="noopener">${strVal} ↗</a>`;
-            }
-            
+            if (strVal.startsWith('http://') || strVal.startsWith('https://')) return `<a href="${strVal}" target="_blank" rel="noopener">${strVal} ↗</a>`;
             return escapeHtml(strVal);
         }
         
@@ -499,14 +752,13 @@
             return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
         }
         
-        function renderPropertiesTable() {
+        window.renderPropertiesTable = function() {
             if (!selectedFeature) return;
             const filterText = (document.getElementById('prop-search-input').value || '').toLowerCase().trim();
             const props = selectedFeature.properties || {};
             const tbody = document.getElementById('prop-table-body');
             
             const keys = Object.keys(props).sort((a, b) => {
-                // Priority keys first
                 const priority = ['name', 'admin_level', 'boundary', 'wikidata', 'wikipedia', 'ISO3166-1', 'ISO3166-2', '@id', '@type'];
                 const idxA = priority.indexOf(a);
                 const idxB = priority.indexOf(b);
@@ -518,60 +770,37 @@
             
             let html = '';
             let count = 0;
-            
             for (let k of keys) {
                 const v = props[k];
                 const strK = String(k).toLowerCase();
                 const strV = (v === null || v === undefined) ? '' : (typeof v === 'object' ? JSON.stringify(v) : String(v)).toLowerCase();
-                
-                if (filterText && !strK.includes(filterText) && !strV.includes(filterText)) {
-                    continue;
-                }
-                
+                if (filterText && !strK.includes(filterText) && !strV.includes(filterText)) continue;
                 count++;
-                html += `<tr>
-                    <td class="prop-key">${escapeHtml(k)}</td>
-                    <td class="prop-val">${formatPropertyValue(k, v)}</td>
-                </tr>`;
+                html += `<tr><td class="prop-key">${escapeHtml(k)}</td><td class="prop-val">${formatPropertyValue(k, v)}</td></tr>`;
             }
-            
-            if (count === 0) {
-                html = `<tr><td colspan="2" style="color:var(--text-muted); text-align:center; padding:12px;">No matching attributes found</td></tr>`;
-            }
-            
+            if (count === 0) html = `<tr><td colspan="2" style="color:var(--text-muted); text-align:center; padding:12px;">No matching attributes found</td></tr>`;
             tbody.innerHTML = html;
-        }
+        };
         
         function createLayerForFeature(f, styleOptions) {
-            const layer = L.geoJSON(f, {
+            return L.geoJSON(f, {
                 style: styleOptions,
                 onEachFeature: function(feature, l) {
                     const p = feature.properties || {};
                     const rawName = p.name || p['official_name'] || p['@id'] || p['id'] || 'Feature';
                     let nameDisplay = escapeHtml(String(rawName));
-                    
                     const intName = p['name:en'] || p['int_name'];
                     if (intName && intName !== rawName) {
                         nameDisplay += ` <span style="color:#94a3b8; font-weight:normal;">(${escapeHtml(String(intName))})</span>`;
                     }
-                    
                     const lvl = p.admin_level ? ' (Level ' + p.admin_level + ')' : '';
-                    
-                    // Hover Tooltip
                     l.bindTooltip(`<b>${nameDisplay}</b>${escapeHtml(lvl)}`, { sticky: true });
-                    
-                    // Click Handler
-                    l.on('click', function(e) {
-                        L.DomEvent.stopPropagation(e);
-                        selectFeature(feature, l);
-                    });
+                    l.on('click', function(e) { L.DomEvent.stopPropagation(e); selectFeature(feature, l); });
                 }
             });
-            return layer;
         }
-
         
-        function renderMap(fitBounds = false) {
+        window.renderMap = function(fitBounds = false) {
             inputLayerGroup.clearLayers();
             outputLayerGroup.clearLayers();
             diffLayerGroup.clearLayers();
@@ -579,10 +808,34 @@
             let rendered = 0;
             let totalEligible = 0;
             const bounds = L.latLngBounds();
-            
             const countToRender = Math.max(inputData.length, outputData.length);
             
-            // Collect eligible items and calculate their bounding box area
+            function calcFeatureArea(f) {
+                if (!f || !f.geometry || !f.geometry.coordinates) return 0;
+                let minX = 999, minY = 999, maxX = -999, maxY = -999;
+                function walk(coords) {
+                    if (!coords || !coords.length) return;
+                    if (typeof coords[0] === 'number') {
+                        if (coords[0] < minX) minX = coords[0];
+                        if (coords[0] > maxX) maxX = coords[0];
+                        if (coords[1] < minY) minY = coords[1];
+                        if (coords[1] > maxY) maxY = coords[1];
+                    } else {
+                        for (let i = 0; i < coords.length; i++) walk(coords[i]);
+                    }
+                }
+                walk(f.geometry.coordinates);
+                if (maxX < minX || maxY < minY) return 0;
+                return (maxX - minX) * (maxY - minY);
+            }
+
+            function getFeatureAdminLevel(f) {
+                const p = (f && f.properties) || {};
+                const lvl = parseInt(p.admin_level || p.admin_level_mapped, 10);
+                return isNaN(lvl) ? 99 : lvl;
+            }
+            
+            // Collect eligible items and calculate their bounds & admin_level
             let items = [];
             for (let i = 0; i < countToRender; i++) {
                 const inF = inputData[i];
@@ -591,38 +844,22 @@
                 if (!sampleF || !featureMatchesFilter(sampleF)) continue;
                 totalEligible++;
                 
-                let area = 0;
-                if (sampleF.geometry && sampleF.geometry.coordinates) {
-                    let minX = 999, minY = 999, maxX = -999, maxY = -999;
-                    
-                    function calcBounds(coords) {
-                        if (!coords || !coords.length) return;
-                        if (typeof coords[0] === 'number') {
-                            if (coords[0] < minX) minX = coords[0];
-                            if (coords[0] > maxX) maxX = coords[0];
-                            if (coords[1] < minY) minY = coords[1];
-                            if (coords[1] > maxY) maxY = coords[1];
-                        } else {
-                            for (let c of coords) calcBounds(c);
-                        }
-                    }
-                    
-                    calcBounds(sampleF.geometry.coordinates);
-                    area = (maxX - minX) * (maxY - minY);
-                }
-                
-                items.push({ inF, outF, area });
+                const area = calcFeatureArea(sampleF);
+                const lvl = getFeatureAdminLevel(sampleF);
+                items.push({ inF, outF, sampleF, area, lvl });
             }
             
-            // Sort by area descending (largest first, so smaller polygons render on top)
-            items.sort((a, b) => b.area - a.area);
+            // Sort: lower admin_level first (L2 Country -> L4 State -> L6 District -> L8 City -> L10 Quarter)
+            // Within same level: largest area first
+            items.sort((a, b) => {
+                if (a.lvl !== b.lvl) return a.lvl - b.lvl;
+                return b.area - a.area;
+            });
             
             for (let item of items) {
                 if (rendered >= maxRenderCap) break;
                 rendered++;
-                
                 const { inF, outF } = item;
-                
                 if (showInput && inF && inF.geometry) {
                     const l = createLayerForFeature(inF, { color: '#00f2fe', weight: 2, fillOpacity: 0.15 });
                     inputLayerGroup.addLayer(l);
@@ -643,8 +880,9 @@
             if (fitBounds && rendered > 0 && bounds.isValid()) {
                 map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
             }
-        }
-
+            
+            setTimeout(() => hideProgress(), 150);
+        };
     </script>
 </body>
 </html>
