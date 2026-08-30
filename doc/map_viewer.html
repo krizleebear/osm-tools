@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GeoJSON & GeoJSONSeq Interactive Map Viewer</title>
+    <title>OSM Admin Polygons Interactive Map Viewer</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -11,9 +11,8 @@
             --bg-dark: #0f172a;
             --panel-bg: rgba(30, 41, 59, 0.88);
             --panel-border: rgba(255, 255, 255, 0.12);
-            --accent-input: #00f2fe;
-            --accent-output: #10b981;
-            --accent-diff: #f59e0b;
+            --accent-polygon: #0284c7;
+            --accent-fill: #38bdf8;
             --accent-highlight: #f43f5e;
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
@@ -103,9 +102,7 @@
             border-radius: 6px; cursor: pointer; transition: all 0.2s ease;
         }
         .btn:hover { background: rgba(255, 255, 255, 0.15); border-color: rgba(255, 255, 255, 0.3); }
-        .btn.active { background: rgba(16, 185, 129, 0.25); border-color: #10b981; color: #34d399; font-weight: 600; }
-        .btn-cyan.active { background: rgba(0, 242, 254, 0.25); border-color: #00f2fe; color: #38bdf8; }
-        .btn-amber.active { background: rgba(245, 158, 11, 0.25); border-color: #f59e0b; color: #fbbf24; }
+        .btn.active { background: rgba(2, 132, 199, 0.35); border-color: #38bdf8; color: #38bdf8; font-weight: 600; }
         
         .search-input {
             width: 100%; padding: 8px 12px; font-size: 0.8rem; border-radius: 6px;
@@ -127,11 +124,9 @@
         }
         .file-pill {
             padding: 8px 10px; border-radius: 6px; font-size: 0.75rem;
-            background: rgba(0,0,0,0.25); border: 1px solid var(--panel-border);
-            display: flex; justify-content: space-between; align-items: center;
+            background: rgba(0,0,0,0.25); border: 1px solid rgba(56, 189, 248, 0.4);
+            color: #38bdf8; display: flex; justify-content: space-between; align-items: center;
         }
-        .file-pill.input { border-color: rgba(0, 242, 254, 0.4); color: #38bdf8; }
-        .file-pill.output { border-color: rgba(16, 185, 129, 0.4); color: #34d399; }
         
         /* Fullscreen Drag Overlay */
         #drag-overlay {
@@ -161,6 +156,7 @@
         .leaflet-popup-tip { background: rgba(15, 23, 42, 0.92) !important; }
         .popup-title { font-weight: 700; color: #38bdf8; margin-bottom: 6px; font-size: 0.9rem; }
         .popup-meta { color: var(--text-muted); font-size: 0.75rem; margin-bottom: 4px; }
+        
         /* Fullscreen Progress Overlay */
         #progress-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -189,7 +185,7 @@
             border-radius: 3px; overflow: hidden; margin-top: 4px;
         }
         .progress-bar-fill {
-            height: 100%; width: 0%; background: linear-gradient(90deg, #00f2fe, #10b981);
+            height: 100%; width: 0%; background: linear-gradient(90deg, #0284c7, #38bdf8);
             border-radius: 3px; transition: width 0.15s ease;
         }
     </style>
@@ -210,36 +206,33 @@
     
     <div id="drag-overlay">
         <div class="drag-msg">Drop GeoJSON, GeoJSONSeq, or GeoParquet files here</div>
-        <div class="drag-sub">Drop 1 or 2 files — Original vs Simplified will be auto-detected!</div>
+        <div class="drag-sub">Instant visual polygon rendering with DuckDB-Wasm & Leaflet</div>
     </div>
     
     <div class="glass-panel header-card">
-        <div class="header-title">GeoJSON & GeoJSONSeq Map Viewer</div>
+        <div class="header-title">OSM Admin Polygons Map Viewer</div>
         <div class="header-subtitle" id="header-filename">Drag & drop files anywhere onto the map or screen</div>
     </div>
     
     <div class="glass-panel controls-card">
-        <div class="section-title">Loaded Datasets</div>
+        <div class="section-title">Loaded Dataset</div>
         <div class="file-status">
-            <div class="file-pill input" id="pill-in">
-                <span>Input: None</span>
-                <span id="count-in">0</span>
-            </div>
-            <div class="file-pill output" id="pill-out">
-                <span>Output: None</span>
-                <span id="count-out">0</span>
+            <div class="file-pill" id="file-pill">
+                <span id="file-name">No file loaded</span>
+                <span id="file-count">0</span>
             </div>
         </div>
         <button class="btn" style="width: 100%; margin-bottom: 10px;" onclick="document.getElementById('file-input-btn').click()">
-            Browse Files...
+            Browse File...
         </button>
-        <input type="file" id="file-input-btn" multiple style="display:none" onchange="handleFileSelect(event)">
+        <input type="file" id="file-input-btn" style="display:none" onchange="handleFileSelect(event)">
         
-        <div class="section-title">Layer Toggle</div>
-        <div class="btn-group">
-            <button class="btn btn-cyan active" id="btn-mode-input" onclick="setMode('input')">Input (Original)</button>
-            <button class="btn active" id="btn-mode-output" onclick="setMode('output')">Output (Simplified)</button>
-            <button class="btn btn-amber active" id="btn-mode-diff" onclick="setMode('diff')">Diff / Buffer</button>
+        <div class="section-title">Basemap</div>
+        <div class="btn-group" id="basemap-buttons">
+            <button class="btn active" id="bm-street" onclick="setBasemap('street')">Street (Clear Labels)</button>
+            <button class="btn" id="bm-topo" onclick="setBasemap('topo')">Topographic</button>
+            <button class="btn" id="bm-dark" onclick="setBasemap('dark')">Dark Canvas</button>
+            <button class="btn" id="bm-satellite" onclick="setBasemap('satellite')">Satellite</button>
         </div>
         
         <div class="section-title">Admin Level Drill-Down</div>
@@ -301,8 +294,7 @@
     <script type="module">
         import * as duckdb from 'https://esm.sh/@duckdb/duckdb-wasm@1.28.0';
         
-        let inputData = [];
-        let outputData = [];
+        let loadedData = [];
         
         let map = L.map('map', { renderer: L.canvas() }).setView([51.1657, 10.4515], 6);
         
@@ -347,25 +339,47 @@
             };
         }
         
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OpenStreetMap &copy; CARTO',
-            subdomains: 'abcd',
-            maxZoom: 19
-        }).addTo(map);
+        const basemaps = {
+            street: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, METI, TomTom',
+                maxZoom: 19
+            }),
+            topo: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, METI',
+                maxZoom: 19
+            }),
+            dark: L.layerGroup([
+                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }),
+                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 })
+            ]),
+            satellite: L.layerGroup([
+                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }),
+                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 })
+            ])
+        };
+
+        let currentBasemap = 'street';
+        basemaps.street.addTo(map);
+
+        window.setBasemap = function(key) {
+            if (!basemaps[key] || key === currentBasemap) return;
+            map.removeLayer(basemaps[currentBasemap]);
+            basemaps[key].addTo(map);
+            currentBasemap = key;
+            
+            document.querySelectorAll('#basemap-buttons .btn').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById('bm-' + key);
+            if (activeBtn) activeBtn.classList.add('active');
+        };
         
-        let showInput = true;
-        let showOutput = true;
-        let showDiff = true;
-        let selectedAdminLevel = 'ALL';
+        let selectedAdminLevel = 'L2';
         let searchQuery = '';
         let maxRenderCap = 300;
         
         let selectedFeature = null;
         let selectedHighlightLayer = null;
         
-        let inputLayerGroup = L.layerGroup().addTo(map);
-        let outputLayerGroup = L.layerGroup().addTo(map);
-        let diffLayerGroup = L.layerGroup().addTo(map);
+        let polygonLayerGroup = L.layerGroup().addTo(map);
         
         // --- Standalone Pure JS WKB / EWKB to GeoJSON Parser ---
         function parseWKB(bytes) {
@@ -478,6 +492,8 @@
 
         // --- DuckDB-Wasm Initialization ---
         let db = null;
+        let duckdbConn = null;
+        let duckdbFileName = null;
         async function initDuckDB() {
             if (db) return db;
             document.getElementById('header-filename').innerText = "Initializing DuckDB-Wasm engine...";
@@ -525,25 +541,12 @@
         };
         
         async function processDroppedFiles(files) {
-            if (files.length === 1) {
-                const f = files[0];
-                const isSimplified = f.name.toLowerCase().includes('simplified') || f.name.toLowerCase().includes('output');
-                await readAndParse(f, isSimplified ? 'output' : 'input');
-            } else if (files.length >= 2) {
-                let f1 = files[0];
-                let f2 = files[1];
-                let inF = f1;
-                let outF = f2;
-                if (f1.name.toLowerCase().includes('simplified') || f1.size < f2.size) {
-                    outF = f1;
-                    inF = f2;
-                }
-                await readAndParse(inF, 'input');
-                await readAndParse(outF, 'output');
+            if (files.length > 0) {
+                await readAndParse(files[0]);
             }
         }
         
-        async function readAndParse(file, target) {
+        async function readAndParse(file) {
             document.getElementById('header-filename').innerText = "Loading " + file.name + "...";
             const isParquet = file.name.toLowerCase().endsWith('.parquet');
             
@@ -555,15 +558,9 @@
                 features = await parseGeoJSONSeqFile(file);
             }
             
-            if (target === 'input') {
-                inputData = features;
-                document.getElementById('pill-in').querySelector('span').innerText = 'Input: ' + file.name;
-                document.getElementById('count-in').innerText = features.length;
-            } else {
-                outputData = features;
-                document.getElementById('pill-out').querySelector('span').innerText = 'Output: ' + file.name;
-                document.getElementById('count-out').innerText = features.length;
-            }
+            loadedData = features;
+            document.getElementById('file-name').innerText = file.name;
+            document.getElementById('file-count').innerText = features.length;
             
             document.getElementById('header-filename').innerText = file.name;
             extractAdminLevels();
@@ -592,16 +589,25 @@
         }
         
         async function parseGeoParquet(file) {
+            const t0 = performance.now();
             setProgress("Loading Parquet", "Initializing DuckDB-Wasm engine...", 10);
             const duck = await initDuckDB();
+            const t1 = performance.now();
             
-            setProgress("Loading Parquet", `Mounting ${file.name} into virtual filesystem...`, 25);
+            if (duckdbConn) { try { await duckdbConn.close(); } catch(e) {} duckdbConn = null; }
+            
+            setProgress("Loading Parquet", `Mounting ${file.name} (${(file.size/1024/1024).toFixed(1)} MB)...`, 25);
             await duck.registerFileHandle(file.name, file, duckdb.DuckDBDataProtocol.BROWSER_FILEREADER, true);
-            const conn = await duck.connect();
+            const t2 = performance.now();
+            duckdbConn = await duck.connect();
+            duckdbFileName = file.name;
             
-            setProgress("Executing Query", `Scanning ${file.name} with DuckDB...`, 40);
-            const res = await conn.query(`SELECT * FROM "${file.name}" LIMIT 50000`);
+            setProgress("Executing Query", `Scanning ${file.name} with DuckDB (admin_level = 2)...`, 40);
+            const res = await duckdbConn.query(`SELECT * FROM "${file.name}" WHERE admin_level = '2'`);
+            const t3 = performance.now();
             const rows = res.toArray();
+            const t4 = performance.now();
+            console.log(`DuckDB timing: init=${(t1-t0).toFixed(0)}ms, register=${(t2-t1).toFixed(0)}ms, query=${(t3-t2).toFixed(0)}ms, toArray=${(t4-t3).toFixed(0)}ms, rows=${rows.length}`);
             
             setProgress("Processing Geometries", `Decoding WKB geometries (0 / ${rows.length})...`, 50);
             
@@ -638,38 +644,57 @@
                 }
             }
             
-            await conn.close();
             return features;
         }
         
         function extractAdminLevels() {
-            const levels = new Set();
-            [...inputData, ...outputData].forEach(f => {
-                const p = f.properties || {};
-                if (p.admin_level) levels.add('L' + p.admin_level);
-                if (p.subtype) levels.add(p.subtype);
-            });
+            const allLevels = ['ALL', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8', 'L9', 'L10', 'L11', 'L12'];
             const container = document.getElementById('admin-level-buttons');
-            container.innerHTML = '<button class="btn ' + (selectedAdminLevel==='ALL'?'active':'') + '" onclick="filterAdminLevel(\'ALL\')">ALL</button>';
-            Array.from(levels).sort().forEach(lvl => {
-                container.innerHTML += '<button class="btn ' + (selectedAdminLevel===lvl?'active':'') + '" onclick="filterAdminLevel(\'' + lvl + '\')">' + lvl + '</button>';
-            });
+            container.innerHTML = allLevels.map(lvl =>
+                `<button class="btn ${selectedAdminLevel===lvl?'active':''}" onclick="filterAdminLevel('${lvl}')">${lvl}</button>`
+            ).join('');
         }
-        window.filterAdminLevel = function(lvl) {
+        async function queryParquetByAdminLevel(level) {
+            if (!duckdbConn || !duckdbFileName) return;
+            setProgress("Querying DuckDB", `Loading admin_level = ${level}...`, 30);
+            const whereClause = level === 'ALL' ? '' : ` WHERE admin_level = '${level.replace('L', '')}'`;
+            const res = await duckdbConn.query(`SELECT * FROM "${duckdbFileName}"${whereClause}`);
+            const rows = res.toArray();
+            setProgress("Processing Geometries", `Decoding ${rows.length} features...`, 50);
+            const features = [];
+            const total = rows.length;
+            const step = Math.max(1, Math.floor(total / 10));
+            for (let i = 0; i < total; i++) {
+                const row = rows[i];
+                const props = row.toJSON();
+                let geom = null;
+                const rawGeom = row.geometry || props.geometry || row.geom || props.geom || row.wkb_geometry || props.wkb_geometry;
+                delete props.geometry; delete props.geom; delete props.wkb_geometry;
+                if (rawGeom) geom = parseWKB(rawGeom);
+                features.push({ type: "Feature", properties: props, geometry: geom });
+                if (i % step === 0 || i === total - 1) {
+                    const pct = 50 + Math.floor((i / total) * 35);
+                    setProgress("Processing Geometries", `Decoding WKB geometries (${i + 1} / ${total})...`, pct);
+                    if (i % (step * 2) === 0) await new Promise(r => setTimeout(r, 0));
+                }
+            }
+            hideProgress();
+            return features;
+        }
+
+        window.filterAdminLevel = async function(lvl) {
             selectedAdminLevel = lvl;
             extractAdminLevels();
-            renderMap(false);
-        };
-        
-        window.setMode = function(mode) {
-            if (mode === 'input') showInput = !showInput;
-            if (mode === 'output') showOutput = !showOutput;
-            if (mode === 'diff') showDiff = !showDiff;
-            
-            document.getElementById('btn-mode-input').classList.toggle('active', showInput);
-            document.getElementById('btn-mode-output').classList.toggle('active', showOutput);
-            document.getElementById('btn-mode-diff').classList.toggle('active', showDiff);
-            renderMap(false);
+            if (duckdbFileName) {
+                const features = await queryParquetByAdminLevel(lvl);
+                if (features) {
+                    loadedData = features;
+                    document.getElementById('file-count').innerText = features.length;
+                    renderMap(true);
+                }
+            } else {
+                renderMap(false);
+            }
         };
         
         window.setCap = function(cap) {
@@ -703,7 +728,7 @@
             selectedFeature = feature;
             if (selectedHighlightLayer) map.removeLayer(selectedHighlightLayer);
             selectedHighlightLayer = L.geoJSON(feature, {
-                style: { color: '#f43f5e', weight: 4, fillOpacity: 0.45 },
+                style: { color: '#f43f5e', fillColor: '#f43f5e', weight: 4, fillOpacity: 0.45 },
                 interactive: false
             }).addTo(map);
             
@@ -801,14 +826,11 @@
         }
         
         window.renderMap = function(fitBounds = false) {
-            inputLayerGroup.clearLayers();
-            outputLayerGroup.clearLayers();
-            diffLayerGroup.clearLayers();
+            polygonLayerGroup.clearLayers();
             
             let rendered = 0;
             let totalEligible = 0;
             const bounds = L.latLngBounds();
-            const countToRender = Math.max(inputData.length, outputData.length);
             
             function calcFeatureArea(f) {
                 if (!f || !f.geometry || !f.geometry.coordinates) return 0;
@@ -837,16 +859,14 @@
             
             // Collect eligible items and calculate their bounds & admin_level
             let items = [];
-            for (let i = 0; i < countToRender; i++) {
-                const inF = inputData[i];
-                const outF = outputData[i];
-                const sampleF = inF || outF;
-                if (!sampleF || !featureMatchesFilter(sampleF)) continue;
+            for (let i = 0; i < loadedData.length; i++) {
+                const f = loadedData[i];
+                if (!f || !featureMatchesFilter(f)) continue;
                 totalEligible++;
                 
-                const area = calcFeatureArea(sampleF);
-                const lvl = getFeatureAdminLevel(sampleF);
-                items.push({ inF, outF, sampleF, area, lvl });
+                const area = calcFeatureArea(f);
+                const lvl = getFeatureAdminLevel(f);
+                items.push({ f, area, lvl });
             }
             
             // Sort: lower admin_level first (L2 Country -> L4 State -> L6 District -> L8 City -> L10 Quarter)
@@ -859,20 +879,16 @@
             for (let item of items) {
                 if (rendered >= maxRenderCap) break;
                 rendered++;
-                const { inF, outF } = item;
-                if (showInput && inF && inF.geometry) {
-                    const l = createLayerForFeature(inF, { color: '#00f2fe', weight: 2, fillOpacity: 0.15 });
-                    inputLayerGroup.addLayer(l);
+                const { f } = item;
+                if (f && f.geometry) {
+                    const l = createLayerForFeature(f, {
+                        color: '#0284c7',
+                        fillColor: '#38bdf8',
+                        weight: 2,
+                        fillOpacity: 0.22
+                    });
+                    polygonLayerGroup.addLayer(l);
                     bounds.extend(l.getBounds());
-                }
-                if (showOutput && outF && outF.geometry) {
-                    const l = createLayerForFeature(outF, { color: '#10b981', weight: 2.5, fillOpacity: 0.25 });
-                    outputLayerGroup.addLayer(l);
-                    bounds.extend(l.getBounds());
-                }
-                if (showDiff && outF && outF.geometry) {
-                    const l = createLayerForFeature(outF, { color: '#f59e0b', weight: 1, dashArray: '4,4', fillOpacity: 0.08 });
-                    diffLayerGroup.addLayer(l);
                 }
             }
             
