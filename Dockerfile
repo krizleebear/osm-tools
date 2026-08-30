@@ -42,4 +42,8 @@ set -exu
 java \$JAVA_OPTS -cp /app/app.jar net.leberfinger.geo.GeoJSONSimplify \$@
 EOT
 
+LABEL org.opencontainers.image.source="https://github.com/krizleebear/osm-tools"
+LABEL org.opencontainers.image.url="https://github.com/krizleebear/osm-tools/blob/master/Dockerfile"
+LABEL org.opencontainers.image.description="OSM processing tools and CoverageSimplifier for administrative boundaries"
+
 CMD ["/entrypoint.sh"]
