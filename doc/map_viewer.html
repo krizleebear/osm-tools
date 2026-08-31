@@ -210,8 +210,8 @@
     </div>
     
     <div class="glass-panel header-card">
-        <div class="header-title">OSM Admin Polygons Map Viewer</div>
-        <div class="header-subtitle" id="header-filename">Drag & drop files anywhere onto the map or screen</div>
+        <div class="header-title">OSM Data & Facilities Map Viewer</div>
+        <div class="header-subtitle" id="header-filename">Drag & drop GeoParquet, GeoJSONSeq, or GeoJSON files here</div>
     </div>
     
     <div class="glass-panel controls-card">
@@ -235,16 +235,16 @@
             <button class="btn" id="bm-satellite" onclick="setBasemap('satellite')">Satellite</button>
         </div>
         
-        <div class="section-title">Admin Level Drill-Down</div>
-        <div class="btn-group" id="admin-level-buttons">
-            <button class="btn active" onclick="filterAdminLevel('ALL')">ALL</button>
+        <div class="section-title" id="filter-section-title">Feature Drill-Down</div>
+        <div class="btn-group" id="filter-buttons">
+            <button class="btn active" onclick="applyCategoryFilter('ALL')">ALL</button>
         </div>
         
         <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
             <span>Feature Search</span>
             <button class="btn" style="padding: 2px 8px; font-size: 0.7rem;" onclick="renderMap(true)" title="Zoom to fit rendered features">Fit View ⛶</button>
         </div>
-        <input type="text" class="search-input" id="search-input" placeholder="Search name or @id..." oninput="onSearch(this.value)">
+        <input type="text" class="search-input" id="search-input" placeholder="Search name, ref, or @id..." oninput="onSearch(this.value)">
         
         <div class="section-title">Performance Guard</div>
         <div class="stats-badge">
@@ -372,14 +372,41 @@
             if (activeBtn) activeBtn.classList.add('active');
         };
         
-        let selectedAdminLevel = 'L2';
+        let currentDatasetType = 'admin_polygons'; // 'admin_polygons', 'facilities', 'places'
+        let selectedCategoryFilter = 'ALL';
+        let categoryCounts = {};
         let searchQuery = '';
-        let maxRenderCap = 300;
+        let maxRenderCap = 500;
         
         let selectedFeature = null;
         let selectedHighlightLayer = null;
         
         let polygonLayerGroup = L.layerGroup().addTo(map);
+
+        const FACILITY_STYLES = {
+            motorway:          { color: '#f59e0b', fillColor: '#fbbf24', weight: 3.5, opacity: 0.95, fillOpacity: 0.3, radius: 5, label: 'Motorway' },
+            junction:          { color: '#d97706', fillColor: '#fcd34d', weight: 2, opacity: 1.0, fillOpacity: 0.9, radius: 5, label: 'Junction' },
+            service_area:      { color: '#64748b', fillColor: '#94a3b8', weight: 2, opacity: 0.9, fillOpacity: 0.35, radius: 5, label: 'Service Area' },
+            airport:           { color: '#0284c7', fillColor: '#38bdf8', weight: 2, opacity: 0.9, fillOpacity: 0.35, radius: 6, label: 'Airport' },
+            shopping_mall:     { color: '#059669', fillColor: '#34d399', weight: 2, opacity: 0.9, fillOpacity: 0.35, radius: 5, label: 'Shopping Mall' },
+            university:        { color: '#7c3aed', fillColor: '#a78bfa', weight: 2, opacity: 0.9, fillOpacity: 0.35, radius: 5, label: 'University' },
+            hospital:          { color: '#e11d48', fillColor: '#fb7185', weight: 2, opacity: 0.9, fillOpacity: 0.35, radius: 5, label: 'Hospital' },
+            stadium:           { color: '#ca8a04', fillColor: '#facc15', weight: 2, opacity: 0.9, fillOpacity: 0.35, radius: 5, label: 'Stadium' },
+            train_station:     { color: '#dc2626', fillColor: '#f87171', weight: 2.5, opacity: 1.0, fillOpacity: 0.85, radius: 6, label: 'Train Station' },
+            exhibition_centre: { color: '#db2777', fillColor: '#f472b6', weight: 2, opacity: 0.9, fillOpacity: 0.35, radius: 5, label: 'Exhibition Centre' },
+            theme_park:        { color: '#c026d3', fillColor: '#e879f9', weight: 2, opacity: 0.9, fillOpacity: 0.35, radius: 5, label: 'Theme Park' },
+            zoo:               { color: '#65a30d', fillColor: '#a3e635', weight: 2, opacity: 0.9, fillOpacity: 0.35, radius: 5, label: 'Zoo' },
+            ferry_terminal:    { color: '#0891b2', fillColor: '#22d3ee', weight: 2, opacity: 1.0, fillOpacity: 0.85, radius: 6, label: 'Ferry Terminal' }
+        };
+
+        const PLACE_STYLES = {
+            city:     { color: '#38bdf8', fillColor: '#0284c7', radius: 7, weight: 2 },
+            town:     { color: '#2dd4bf', fillColor: '#0d9488', radius: 6, weight: 2 },
+            village:  { color: '#a3e635', fillColor: '#65a30d', radius: 5, weight: 1.5 },
+            hamlet:   { color: '#fbbf24', fillColor: '#d97706', radius: 4, weight: 1.5 },
+            suburb:   { color: '#c084fc', fillColor: '#9333ea', radius: 5, weight: 1.5 },
+            quarter:  { color: '#f472b6', fillColor: '#db2777', radius: 4, weight: 1.5 }
+        };
         
         // --- Standalone Pure JS WKB / EWKB to GeoJSON Parser ---
         function parseWKB(bytes) {
@@ -556,6 +583,7 @@
                 features = await parseGeoParquet(file);
             } else {
                 features = await parseGeoJSONSeqFile(file);
+                detectDatasetTypeFromFeatures(features);
             }
             
             loadedData = features;
@@ -563,8 +591,28 @@
             document.getElementById('file-count').innerText = features.length;
             
             document.getElementById('header-filename').innerText = file.name;
-            extractAdminLevels();
+            renderFilterButtons();
             renderMap(true);
+        }
+        
+        function detectDatasetTypeFromFeatures(features) {
+            if (!features || features.length === 0) return;
+            const sample = features[0].properties || {};
+            if (sample.feature_class) {
+                currentDatasetType = 'facilities';
+            } else if (sample.place_type) {
+                currentDatasetType = 'places';
+            } else {
+                currentDatasetType = 'admin_polygons';
+            }
+            
+            // Calculate counts
+            categoryCounts = {};
+            for (let f of features) {
+                const p = f.properties || {};
+                const cat = p.feature_class || p.place_type || (p.admin_level ? 'L' + p.admin_level : 'Other');
+                categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+            }
         }
         
         async function parseGeoJSONSeqFile(file) {
@@ -579,7 +627,16 @@
                     for (let i = 0; i < total; i++) {
                         const line = lines[i].trim();
                         if (!line) continue;
-                        try { features.push(JSON.parse(line)); } catch(err) {}
+                        try {
+                            const obj = JSON.parse(line);
+                            if (obj.type === "Feature") {
+                                features.push(obj);
+                            } else if (obj.geometry) {
+                                features.push({ type: "Feature", properties: obj, geometry: obj.geometry });
+                            } else if (obj.geom_json) {
+                                features.push({ type: "Feature", properties: obj, geometry: JSON.parse(obj.geom_json) });
+                            }
+                        } catch(err) {}
                     }
                     setProgress("Parsing Complete", `Extracted ${features.length} features`, 85);
                     resolve(features);
@@ -602,15 +659,54 @@
             duckdbConn = await duck.connect();
             duckdbFileName = file.name;
             
-            setProgress("Executing Query", `Scanning ${file.name} with DuckDB (admin_level = 2)...`, 40);
-            const res = await duckdbConn.query(`SELECT * FROM "${file.name}" WHERE admin_level = '2'`);
+            // Inspect schema
+            setProgress("Inspecting Schema", `Detecting columns in ${file.name}...`, 35);
+            const descRes = await duckdbConn.query(`DESCRIBE SELECT * FROM read_parquet('${file.name}')`);
+            const colRows = descRes.toArray().map(r => r.toJSON());
+            const colNames = colRows.map(r => (r.column_name || '').toLowerCase());
+            
+            categoryCounts = {};
+            let querySql = `SELECT * FROM read_parquet('${file.name}')`;
+            
+            if (colNames.includes('feature_class')) {
+                currentDatasetType = 'facilities';
+                selectedCategoryFilter = 'ALL';
+                const countsRes = await duckdbConn.query(`SELECT feature_class, count(*) AS cnt FROM read_parquet('${file.name}') GROUP BY 1 ORDER BY cnt DESC`);
+                for (let r of countsRes.toArray()) {
+                    const obj = r.toJSON();
+                    if (obj.feature_class) categoryCounts[obj.feature_class] = Number(obj.cnt);
+                }
+            } else if (colNames.includes('place_type')) {
+                currentDatasetType = 'places';
+                selectedCategoryFilter = 'ALL';
+                const countsRes = await duckdbConn.query(`SELECT place_type, count(*) AS cnt FROM read_parquet('${file.name}') GROUP BY 1 ORDER BY cnt DESC`);
+                for (let r of countsRes.toArray()) {
+                    const obj = r.toJSON();
+                    if (obj.place_type) categoryCounts[obj.place_type] = Number(obj.cnt);
+                }
+            } else if (colNames.includes('admin_level')) {
+                currentDatasetType = 'admin_polygons';
+                selectedCategoryFilter = 'L2';
+                const countsRes = await duckdbConn.query(`SELECT admin_level, count(*) AS cnt FROM read_parquet('${file.name}') GROUP BY 1 ORDER BY admin_level`);
+                for (let r of countsRes.toArray()) {
+                    const obj = r.toJSON();
+                    if (obj.admin_level !== undefined) categoryCounts['L' + obj.admin_level] = Number(obj.cnt);
+                }
+                querySql = `SELECT * FROM read_parquet('${file.name}') WHERE admin_level = '2'`;
+            }
+            
+            setProgress("Executing Query", `Scanning ${file.name} with DuckDB...`, 45);
+            const res = await duckdbConn.query(querySql);
             const t3 = performance.now();
             const rows = res.toArray();
             const t4 = performance.now();
             console.log(`DuckDB timing: init=${(t1-t0).toFixed(0)}ms, register=${(t2-t1).toFixed(0)}ms, query=${(t3-t2).toFixed(0)}ms, toArray=${(t4-t3).toFixed(0)}ms, rows=${rows.length}`);
             
-            setProgress("Processing Geometries", `Decoding WKB geometries (0 / ${rows.length})...`, 50);
-            
+            setProgress("Processing Geometries", `Decoding geometries (0 / ${rows.length})...`, 55);
+            return decodeRowsToFeatures(rows);
+        }
+        
+        function decodeRowsToFeatures(rows) {
             const features = [];
             const total = rows.length;
             const step = Math.max(1, Math.floor(total / 20));
@@ -627,6 +723,8 @@
 
                 if (rawGeom) {
                     geom = parseWKB(rawGeom);
+                } else if (props.geom_json) {
+                    try { geom = JSON.parse(props.geom_json); } catch(e) {}
                 }
                 
                 features.push({
@@ -636,66 +734,92 @@
                 });
 
                 if (i % step === 0 || i === total - 1) {
-                    const pct = 50 + Math.floor((i / total) * 35);
-                    setProgress("Processing Geometries", `Decoding WKB geometries (${i + 1} / ${total})...`, pct);
-                    if (i % (step * 2) === 0) {
-                        await new Promise(r => setTimeout(r, 0));
-                    }
+                    const pct = 55 + Math.floor((i / total) * 35);
+                    setProgress("Processing Geometries", `Decoding geometries (${i + 1} / ${total})...`, pct);
                 }
             }
-            
             return features;
         }
         
-        function extractAdminLevels() {
-            const allLevels = ['ALL', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8', 'L9', 'L10', 'L11', 'L12'];
-            const container = document.getElementById('admin-level-buttons');
-            container.innerHTML = allLevels.map(lvl =>
-                `<button class="btn ${selectedAdminLevel===lvl?'active':''}" onclick="filterAdminLevel('${lvl}')">${lvl}</button>`
-            ).join('');
-        }
-        async function queryParquetByAdminLevel(level) {
-            if (!duckdbConn || !duckdbFileName) return;
-            setProgress("Querying DuckDB", `Loading admin_level = ${level}...`, 30);
-            const whereClause = level === 'ALL' ? '' : ` WHERE admin_level = '${level.replace('L', '')}'`;
-            const res = await duckdbConn.query(`SELECT * FROM "${duckdbFileName}"${whereClause}`);
-            const rows = res.toArray();
-            setProgress("Processing Geometries", `Decoding ${rows.length} features...`, 50);
-            const features = [];
-            const total = rows.length;
-            const step = Math.max(1, Math.floor(total / 10));
-            for (let i = 0; i < total; i++) {
-                const row = rows[i];
-                const props = row.toJSON();
-                let geom = null;
-                const rawGeom = row.geometry || props.geometry || row.geom || props.geom || row.wkb_geometry || props.wkb_geometry;
-                delete props.geometry; delete props.geom; delete props.wkb_geometry;
-                if (rawGeom) geom = parseWKB(rawGeom);
-                features.push({ type: "Feature", properties: props, geometry: geom });
-                if (i % step === 0 || i === total - 1) {
-                    const pct = 50 + Math.floor((i / total) * 35);
-                    setProgress("Processing Geometries", `Decoding WKB geometries (${i + 1} / ${total})...`, pct);
-                    if (i % (step * 2) === 0) await new Promise(r => setTimeout(r, 0));
+        function renderFilterButtons() {
+            const container = document.getElementById('filter-buttons');
+            const titleEl = document.getElementById('filter-section-title');
+            
+            let buttons = [];
+            
+            if (currentDatasetType === 'facilities') {
+                titleEl.innerText = 'Facility Class Drill-Down';
+                buttons.push({ id: 'ALL', label: 'ALL' });
+                const classes = Object.keys(categoryCounts);
+                for (let fc of classes) {
+                    const countStr = categoryCounts[fc] ? ` (${categoryCounts[fc]})` : '';
+                    const style = FACILITY_STYLES[fc] || {};
+                    const label = (style.label || fc) + countStr;
+                    buttons.push({ id: fc, label: label, color: style.color });
+                }
+            } else if (currentDatasetType === 'places') {
+                titleEl.innerText = 'Place Type Drill-Down';
+                buttons.push({ id: 'ALL', label: 'ALL' });
+                for (let pt of Object.keys(categoryCounts)) {
+                    const countStr = categoryCounts[pt] ? ` (${categoryCounts[pt]})` : '';
+                    buttons.push({ id: pt, label: pt + countStr });
+                }
+            } else {
+                titleEl.innerText = 'Admin Level Drill-Down';
+                const allLevels = ['ALL', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8', 'L9', 'L10', 'L11', 'L12'];
+                for (let lvl of allLevels) {
+                    const countStr = categoryCounts[lvl] ? ` (${categoryCounts[lvl]})` : '';
+                    buttons.push({ id: lvl, label: lvl + countStr });
                 }
             }
+            
+            container.innerHTML = buttons.map(b => {
+                const activeClass = selectedCategoryFilter === b.id ? 'active' : '';
+                const colorDot = b.color ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${b.color};margin-right:4px;"></span>` : '';
+                return `<button class="btn ${activeClass}" onclick="applyCategoryFilter('${b.id}')">${colorDot}${b.label}</button>`;
+            }).join('');
+        }
+        
+        async function queryParquetByCategory(filterVal) {
+            if (!duckdbConn || !duckdbFileName) return null;
+            setProgress("Querying DuckDB", `Filtering for ${filterVal}...`, 30);
+            
+            let whereClause = '';
+            if (filterVal !== 'ALL') {
+                if (currentDatasetType === 'facilities') {
+                    whereClause = ` WHERE feature_class = '${filterVal}'`;
+                } else if (currentDatasetType === 'places') {
+                    whereClause = ` WHERE place_type = '${filterVal}'`;
+                } else if (currentDatasetType === 'admin_polygons') {
+                    whereClause = ` WHERE admin_level = '${filterVal.replace('L', '')}'`;
+                }
+            }
+            
+            const res = await duckdbConn.query(`SELECT * FROM read_parquet('${duckdbFileName}')${whereClause}`);
+            const rows = res.toArray();
+            setProgress("Processing Geometries", `Decoding ${rows.length} features...`, 55);
+            const features = decodeRowsToFeatures(rows);
             hideProgress();
             return features;
         }
 
-        window.filterAdminLevel = async function(lvl) {
-            selectedAdminLevel = lvl;
-            extractAdminLevels();
+        window.applyCategoryFilter = async function(catId) {
+            selectedCategoryFilter = catId;
+            renderFilterButtons();
+            
             if (duckdbFileName) {
-                const features = await queryParquetByAdminLevel(lvl);
+                const features = await queryParquetByCategory(catId);
                 if (features) {
                     loadedData = features;
                     document.getElementById('file-count').innerText = features.length;
                     renderMap(true);
                 }
             } else {
-                renderMap(false);
+                renderMap(true);
             }
         };
+        
+        window.filterAdminLevel = window.applyCategoryFilter;
         
         window.setCap = function(cap) {
             maxRenderCap = cap;
@@ -712,32 +836,78 @@
         
         function featureMatchesFilter(f) {
             const p = f.properties || {};
-            if (selectedAdminLevel !== 'ALL') {
-                const lvlStr = 'L' + p.admin_level;
-                if (lvlStr !== selectedAdminLevel && p.subtype !== selectedAdminLevel) return false;
+            if (selectedCategoryFilter !== 'ALL') {
+                if (currentDatasetType === 'facilities') {
+                    if (p.feature_class !== selectedCategoryFilter) return false;
+                } else if (currentDatasetType === 'places') {
+                    if (p.place_type !== selectedCategoryFilter) return false;
+                } else if (currentDatasetType === 'admin_polygons') {
+                    const lvlStr = 'L' + p.admin_level;
+                    if (lvlStr !== selectedCategoryFilter && p.subtype !== selectedCategoryFilter) return false;
+                }
             }
             if (searchQuery) {
-                const name = (p.name || '').toLowerCase();
-                const id = String(p['@id'] || p.id || '').toLowerCase();
+                const name = (p.name || p.ref || '').toLowerCase();
+                const id = String(p['@id'] || p.id || p.osm_id || '').toLowerCase();
                 if (!name.includes(searchQuery) && !id.includes(searchQuery)) return false;
             }
             return true;
         }
         
+        function getFeatureStyle(f, defaultStyle) {
+            const p = f.properties || {};
+            if (p.feature_class && FACILITY_STYLES[p.feature_class]) {
+                const fs = FACILITY_STYLES[p.feature_class];
+                return {
+                    color: fs.color,
+                    fillColor: fs.fillColor || fs.color,
+                    weight: fs.weight || 2.5,
+                    opacity: fs.opacity !== undefined ? fs.opacity : 0.9,
+                    fillOpacity: fs.fillOpacity !== undefined ? fs.fillOpacity : 0.35,
+                    radius: fs.radius || 6
+                };
+            }
+            if (p.place_type && PLACE_STYLES[p.place_type]) {
+                const ps = PLACE_STYLES[p.place_type];
+                return {
+                    color: ps.color,
+                    fillColor: ps.fillColor || ps.color,
+                    weight: ps.weight || 2,
+                    opacity: 0.9,
+                    fillOpacity: 0.85,
+                    radius: ps.radius || 5
+                };
+            }
+            return defaultStyle || {
+                color: '#0284c7',
+                fillColor: '#38bdf8',
+                weight: 2,
+                opacity: 0.85,
+                fillOpacity: 0.22,
+                radius: 5
+            };
+        }
+        
         function selectFeature(feature, layer) {
             selectedFeature = feature;
             if (selectedHighlightLayer) map.removeLayer(selectedHighlightLayer);
+            
+            const isPoint = feature.geometry && feature.geometry.type === 'Point';
             selectedHighlightLayer = L.geoJSON(feature, {
-                style: { color: '#f43f5e', fillColor: '#f43f5e', weight: 4, fillOpacity: 0.45 },
+                style: { color: '#f43f5e', fillColor: '#f43f5e', weight: 4, fillOpacity: 0.6 },
+                pointToLayer: (geojson, latlng) => L.circleMarker(latlng, { radius: 9, color: '#fff', fillColor: '#f43f5e', weight: 3, fillOpacity: 1 }),
                 interactive: false
             }).addTo(map);
             
             const props = feature.properties || {};
-            const name = props.name || props['official_name'] || props['@id'] || 'Unnamed Feature';
-            const lvl = props.admin_level ? 'L' + props.admin_level : (props.subtype || 'L?');
+            const name = props.name || props.ref || props['official_name'] || props['@id'] || props.osm_id || 'Unnamed Feature';
+            let badge = 'Feature';
+            if (props.feature_class) badge = props.feature_class;
+            else if (props.place_type) badge = props.place_type;
+            else if (props.admin_level) badge = 'L' + props.admin_level;
             
             document.getElementById('prop-title').innerText = name;
-            document.getElementById('prop-badge').innerText = lvl;
+            document.getElementById('prop-badge').innerText = badge;
             document.getElementById('properties-card').classList.add('active');
             renderPropertiesTable();
         }
@@ -765,7 +935,7 @@
                 return `<a href="https://${lang}.wikipedia.org/wiki/${encodeURIComponent(page)}" target="_blank" rel="noopener">${strVal} ↗</a>`;
             }
             if (key === '@id' || key === 'id' || key === 'osm_id') {
-                const type = key.startsWith('@') ? 'relation' : 'relation';
+                const type = (selectedFeature && selectedFeature.properties && selectedFeature.properties.osm_type === 'N') ? 'node' : (selectedFeature && selectedFeature.properties && selectedFeature.properties.osm_type === 'W' ? 'way' : 'relation');
                 return `<a href="https://www.openstreetmap.org/${type}/${strVal}" target="_blank" rel="noopener">${strVal} ↗</a>`;
             }
             if (strVal.startsWith('http://') || strVal.startsWith('https://')) return `<a href="${strVal}" target="_blank" rel="noopener">${strVal} ↗</a>`;
@@ -784,7 +954,7 @@
             const tbody = document.getElementById('prop-table-body');
             
             const keys = Object.keys(props).sort((a, b) => {
-                const priority = ['name', 'admin_level', 'boundary', 'wikidata', 'wikipedia', 'ISO3166-1', 'ISO3166-2', '@id', '@type'];
+                const priority = ['name', 'ref', 'feature_class', 'place_type', 'admin_level', 'boundary', 'wikidata', 'wikipedia', 'iata', 'icao', 'ISO3166-1', 'ISO3166-2', 'osm_id', 'osm_type'];
                 const idxA = priority.indexOf(a);
                 const idxB = priority.indexOf(b);
                 if (idxA !== -1 && idxB !== -1) return idxA - idxB;
@@ -796,7 +966,22 @@
             let html = '';
             let count = 0;
             for (let k of keys) {
-                const v = props[k];
+                let v = props[k];
+                // Unpack JSON tags column if present
+                if (k === 'tags' && typeof v === 'string') {
+                    try {
+                        const parsedTags = JSON.parse(v);
+                        for (let tk of Object.keys(parsedTags).sort()) {
+                            const tv = parsedTags[tk];
+                            const strK = ('tag:' + tk).toLowerCase();
+                            const strV = String(tv).toLowerCase();
+                            if (filterText && !strK.includes(filterText) && !strV.includes(filterText)) continue;
+                            count++;
+                            html += `<tr><td class="prop-key" style="color:#38bdf8;">${escapeHtml(tk)}</td><td class="prop-val">${formatPropertyValue(tk, tv)}</td></tr>`;
+                        }
+                        continue;
+                    } catch(e) {}
+                }
                 const strK = String(k).toLowerCase();
                 const strV = (v === null || v === undefined) ? '' : (typeof v === 'object' ? JSON.stringify(v) : String(v)).toLowerCase();
                 if (filterText && !strK.includes(filterText) && !strV.includes(filterText)) continue;
@@ -807,19 +992,34 @@
             tbody.innerHTML = html;
         };
         
-        function createLayerForFeature(f, styleOptions) {
+        function createLayerForFeature(f, defaultStyle) {
+            const style = getFeatureStyle(f, defaultStyle);
             return L.geoJSON(f, {
-                style: styleOptions,
+                style: style,
+                pointToLayer: function(geojsonPoint, latlng) {
+                    return L.circleMarker(latlng, {
+                        radius: style.radius || 6,
+                        fillColor: style.fillColor || style.color,
+                        color: style.color,
+                        weight: style.weight || 2,
+                        opacity: 1,
+                        fillOpacity: style.fillOpacity !== undefined ? style.fillOpacity : 0.85
+                    });
+                },
                 onEachFeature: function(feature, l) {
                     const p = feature.properties || {};
-                    const rawName = p.name || p['official_name'] || p['@id'] || p['id'] || 'Feature';
+                    const rawName = p.name || p.ref || p['official_name'] || p['@id'] || p['id'] || (p.feature_class ? `[${p.feature_class}]` : 'Feature');
                     let nameDisplay = escapeHtml(String(rawName));
                     const intName = p['name:en'] || p['int_name'];
                     if (intName && intName !== rawName) {
                         nameDisplay += ` <span style="color:#94a3b8; font-weight:normal;">(${escapeHtml(String(intName))})</span>`;
                     }
-                    const lvl = p.admin_level ? ' (Level ' + p.admin_level + ')' : '';
-                    l.bindTooltip(`<b>${nameDisplay}</b>${escapeHtml(lvl)}`, { sticky: true });
+                    let badge = '';
+                    if (p.feature_class) badge = ` <span style="color:${style.color}; font-weight:bold;">[${p.feature_class}]</span>`;
+                    else if (p.place_type) badge = ` <span style="color:#38bdf8; font-weight:bold;">[${p.place_type}]</span>`;
+                    else if (p.admin_level) badge = ` (Level ${p.admin_level})`;
+                    
+                    l.bindTooltip(`<b>${nameDisplay}</b>${badge}`, { sticky: true });
                     l.on('click', function(e) { L.DomEvent.stopPropagation(e); selectFeature(feature, l); });
                 }
             });
@@ -851,13 +1051,18 @@
                 return (maxX - minX) * (maxY - minY);
             }
 
-            function getFeatureAdminLevel(f) {
+            function getFeatureSortPriority(f) {
                 const p = (f && f.properties) || {};
+                if (p.feature_class) {
+                    const order = ['airport', 'university', 'hospital', 'shopping_mall', 'stadium', 'exhibition_centre', 'theme_park', 'zoo', 'service_area', 'train_station', 'ferry_terminal', 'junction', 'motorway'];
+                    const idx = order.indexOf(p.feature_class);
+                    return idx !== -1 ? idx : 50;
+                }
                 const lvl = parseInt(p.admin_level || p.admin_level_mapped, 10);
                 return isNaN(lvl) ? 99 : lvl;
             }
             
-            // Collect eligible items and calculate their bounds & admin_level
+            // Collect eligible items
             let items = [];
             for (let i = 0; i < loadedData.length; i++) {
                 const f = loadedData[i];
@@ -865,14 +1070,13 @@
                 totalEligible++;
                 
                 const area = calcFeatureArea(f);
-                const lvl = getFeatureAdminLevel(f);
-                items.push({ f, area, lvl });
+                const prio = getFeatureSortPriority(f);
+                items.push({ f, area, prio });
             }
             
-            // Sort: lower admin_level first (L2 Country -> L4 State -> L6 District -> L8 City -> L10 Quarter)
-            // Within same level: largest area first
+            // Sort: larger polygons first, lines, then points on top
             items.sort((a, b) => {
-                if (a.lvl !== b.lvl) return a.lvl - b.lvl;
+                if (a.prio !== b.prio) return a.prio - b.prio;
                 return b.area - a.area;
             });
             
@@ -881,14 +1085,14 @@
                 rendered++;
                 const { f } = item;
                 if (f && f.geometry) {
-                    const l = createLayerForFeature(f, {
-                        color: '#0284c7',
-                        fillColor: '#38bdf8',
-                        weight: 2,
-                        fillOpacity: 0.22
-                    });
+                    const l = createLayerForFeature(f);
                     polygonLayerGroup.addLayer(l);
-                    bounds.extend(l.getBounds());
+                    if (l.getBounds) {
+                        const b = l.getBounds();
+                        if (b.isValid()) bounds.extend(b);
+                    } else if (l.getLatLng) {
+                        bounds.extend(l.getLatLng());
+                    }
                 }
             }
             
