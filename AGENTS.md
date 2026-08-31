@@ -24,6 +24,8 @@ To ensure a consistent development workflow, clean spatial processing, and clear
    - `test:` Adding or updating unit/E2E test suites.
    - `docs:` Updates to documentation, READMEs, or architectural docs.
    - `refactor:` Code refactoring without changing user-facing behavior.
+3. **Explanation Preceding Git Actions Invariant (Explain First, Commit Second):**
+   The agent must always first output a clear, comprehensive explanation of the diagnosis, the rationale, and the exact changes in the visible response text before requesting permission or attempting to execute `git commit`, `git push`, or pipeline triggers. Never trigger permission prompts for Git actions without the user having seen the complete explanatory context first.
 
 ---
 
